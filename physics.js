@@ -17,17 +17,17 @@ class CarPhysics {
         this.angularVelocity = 0;
         
         // Параметры автомобиля
-        this.maxSpeed = 1000; // пикселей в секунду
-        this.acceleration = 400; // Уменьшено ускорение для более реалистичной физики
+        this.maxSpeed = 1400; // пикселей в секунду
+        this.acceleration = 900; // Увеличено для быстрого разгона
         this.brakeForce = 600;
         this.friction = 0.96; // Сопротивление качению
         this.drag = 0.985; // Сопротивление воздуха
         
         // Параметры заноса
-        this.grip = 0.92; // Сцепление с дорогой (меньше = легче занос)
+        this.grip = 0.85; // Сцепление с дорогой (меньше = легче занос)
         this.slipAngle = 0; // Угол скольжения
-        this.driftFactor = 0.08; // Насколько сильно сносит
-        this.lateralFriction = 0.88; // Боковое трение для инерции в заносе
+        this.driftFactor = 0.12; // Насколько сильно сносит
+        this.lateralFriction = 0.92; // Боковое трение для инерции в заносе
         
         // Размеры автомобиля
         this.width = 50;
@@ -91,15 +91,15 @@ class CarPhysics {
         const steerForce = this.steerInput * baseSteerForce * steerAuthority * dt;
         
         if (this.handbrake) {
-            // На ручнике поворачиваем резче, но теряем сцепление и замедляемся
-            this.angularVelocity += this.steerInput * 0.5 * steerAuthority * dt;
-            this.grip = 0.65;
-            // Ручник тормозит, а не ускоряет
-            this.velocityX *= 0.97;
-            this.velocityY *= 0.97;
+            // На ручнике поворачиваем резче, но теряем сцепление и ЗАМЕДЛЯЕМСЯ
+            this.angularVelocity += this.steerInput * 0.6 * steerAuthority * dt;
+            this.grip = 0.55;
+            // Ручник тормозит задние колёса - сильное замедление
+            this.velocityX *= 0.94;
+            this.velocityY *= 0.94;
         } else {
             this.angularVelocity += steerForce;
-            this.grip = 0.92;
+            this.grip = 0.85;
         }
         
         // Затухание угловой скорости (увеличено для более плавного поворота)
@@ -119,9 +119,9 @@ class CarPhysics {
         this.slipAngle = angleDiff;
         
         // Применение сил сцепления/заноса
-        if (Math.abs(this.slipAngle) > 0.3 || this.handbrake) {
+        if (Math.abs(this.slipAngle) > 0.2 || this.handbrake) {
             // Машина в заносе - сохраняем инерцию и боковое скольжение
-            const driftGrip = this.handbrake ? 0.5 : this.grip;
+            const driftGrip = this.handbrake ? 0.4 : this.grip;
             
             // Сохраняем инерцию движения (важно для реалистичного дрифта)
             this.velocityX *= this.drag;
@@ -132,7 +132,7 @@ class CarPhysics {
             const forwardSpeed = this.velocityX * Math.cos(this.angle) + this.velocityY * Math.sin(this.angle);
             
             // Постепенное уменьшение боковой скорости с сохранением инерции
-            const newLateralSpeed = lateralSpeed * this.lateralFriction;
+            const newLateralSpeed = lateralSpeed * (this.handbrake ? 0.95 : this.lateralFriction);
             
             // Пересчитываем вектор скорости
             this.velocityX = forwardSpeed * Math.cos(this.angle) - newLateralSpeed * Math.sin(this.angle);
