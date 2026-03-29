@@ -17,17 +17,17 @@ class CarPhysics {
         this.angularVelocity = 0;
         
         // Параметры автомобиля
-        this.maxSpeed = 1400; // пикселей в секунду
-        this.acceleration = 900; // Увеличено для быстрого разгона
+        this.maxSpeed = 800; // пикселей в секунду
+        this.acceleration = 400; // Ускорение
         this.brakeForce = 600;
         this.friction = 0.96; // Сопротивление качению
         this.drag = 0.985; // Сопротивление воздуха
         
         // Параметры заноса
-        this.grip = 0.85; // Сцепление с дорогой (меньше = легче занос)
+        this.grip = 0.92; // Сцепление с дорогой
         this.slipAngle = 0; // Угол скольжения
-        this.driftFactor = 0.12; // Насколько сильно сносит
-        this.lateralFriction = 0.92; // Боковое трение для инерции в заносе
+        this.driftFactor = 0.08; // Насколько сильно сносит
+        this.lateralFriction = 0.95; // Боковое трение для инерции в заносе
         
         // Размеры автомобиля
         this.width = 50;
@@ -99,7 +99,7 @@ class CarPhysics {
             this.velocityY *= 0.94;
         } else {
             this.angularVelocity += steerForce;
-            this.grip = 0.85;
+            this.grip = 0.92;
         }
         
         // Затухание угловой скорости (увеличено для более плавного поворота)
