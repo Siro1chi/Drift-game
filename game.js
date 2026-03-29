@@ -140,15 +140,10 @@ function drawCar() {
     ctx.fillStyle = 'rgba(0,0,0,0.3)';
     ctx.fillRect(-car.width/2 + 5, -car.height/2 + 5, car.width, car.height);
     
-    // Корпус
+    // Корпус - белый AE86 стиль
     const gradient = ctx.createLinearGradient(-car.width/2, 0, car.width/2, 0);
-    if (car.isDrifting()) {
-        gradient.addColorStop(0, '#ff6b6b');
-        gradient.addColorStop(1, '#ee5a5a');
-    } else {
-        gradient.addColorStop(0, '#4a9eff');
-        gradient.addColorStop(1, '#3a8eef');
-    }
+    gradient.addColorStop(0, '#f5f5f5');
+    gradient.addColorStop(1, '#e8e8e8');
     
     ctx.fillStyle = gradient;
     ctx.fillRect(-car.width/2, -car.height/2, car.width, car.height);
@@ -227,7 +222,7 @@ function updateUI() {
     driftAngleElement.textContent = car.getDriftAngle();
     
     if (car.isDrifting()) {
-        driftAngleElement.parentElement.style.color = '#ff6b6b';
+        driftAngleElement.parentElement.style.color = '#ffcc00';
     } else {
         driftAngleElement.parentElement.style.color = '#fff';
     }
