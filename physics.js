@@ -17,17 +17,17 @@ class CarPhysics {
         this.angularVelocity = 0;
         
         // Параметры автомобиля
-        this.maxSpeed = 1400; // пикселей в секунду
-        this.acceleration = 800; // Ускорение
-        this.brakeForce = 900;
-        this.friction = 0.97; // Сопротивление качению
-        this.drag = 0.99; // Сопротивление воздуха
+        this.maxSpeed = 8000; // пикселей в секунду
+        this.acceleration = 2100; // Ускорение
+        this.brakeForce = 200;
+        this.friction = 0.96; // Сопротивление качению
+        this.drag = 0.97; // Сопротивление воздуха
         
         // Параметры заноса
-        this.grip = 0.85; // Сцепление с дорогой (меньше = легче сорваться)
+        this.grip = 0.35; // Сцепление с дорогой (меньше = легче сорваться)
         this.slipAngle = 0; // Угол скольжения
-        this.driftFactor = 0.12; // Насколько сильно сносит
-        this.lateralFriction = 0.90; // Боковое трение для инерции в заносе
+        this.driftFactor = 0.2; // Насколько сильно сносит
+        this.lateralFriction = 1.01; // Боковое трение для инерции в заносе
         
         // Размеры автомобиля
         this.width = 50;
@@ -87,7 +87,7 @@ class CarPhysics {
             steerAuthority = 1.0 + (1.5 * (1 - speedKmh / maxSpeedRef));
         }
         
-        const baseSteerForce = 0.15; // Базовая сила поворота
+        const baseSteerForce = 0.6; // Базовая сила поворота
         const steerForce = this.steerInput * baseSteerForce * steerAuthority * dt;
         
         if (this.handbrake) {
@@ -95,15 +95,15 @@ class CarPhysics {
             this.angularVelocity += this.steerInput * 0.8 * steerAuthority * dt;
             this.grip = 0.35;
             // Ручник тормозит задние колёса - сильное замедление
-            this.velocityX *= 0.95;
-            this.velocityY *= 0.95;
+            this.velocityX *= 0.97;
+            this.velocityY *= 0.97;
         } else {
             this.angularVelocity += steerForce;
-            this.grip = 0.85;
+            this.grip = 0.35;
         }
         
         // Затухание угловой скорости (увеличено для более плавного поворота)
-        this.angularVelocity *= 0.85;
+        this.angularVelocity *= 0.75;
         
         // Обновляем угол
         this.angle += this.angularVelocity;
