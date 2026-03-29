@@ -74,13 +74,13 @@ class CarPhysics {
             this.velocityY *= ratio;
         }
         
-        // Поворот (зависит от скорости) - уменьшена скорость поворота
+        // Поворот (зависит от скорости) - уменьшена скорость поворота в 10 раз
         const steerAuthority = Math.min(currentSpeed / 300, 1);
-        const steerForce = this.steerInput * 2.0 * steerAuthority * dt;
+        const steerForce = this.steerInput * 0.2 * steerAuthority * dt;
         
         if (this.handbrake) {
             // На ручнике поворачиваем резче, но теряем сцепление
-            this.angularVelocity += this.steerInput * 3.5 * dt;
+            this.angularVelocity += this.steerInput * 0.35 * dt;
             this.grip = 0.7;
         } else {
             this.angularVelocity += steerForce;
