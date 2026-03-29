@@ -17,17 +17,30 @@ class CarPhysics {
         this.angularVelocity = 0;
         
         // Параметры автомобиля
+<<<<<<< Updated upstream
         this.maxSpeed = 8000; // пикселей в секунду
         this.acceleration = 2100; // Ускорение
         this.brakeForce = 200;
         this.friction = 0.96; // Сопротивление качению
         this.drag = 0.97; // Сопротивление воздуха
+=======
+        this.maxSpeed = 10000; // пикселей в секунду
+        this.acceleration = 1600; // Ускорение
+        this.brakeForce = 100;
+        this.friction = 0.96; // Сопротивление качению
+        this.drag = 0.92; // Сопротивление воздуха
+>>>>>>> Stashed changes
         
         // Параметры заноса
         this.grip = 0.35; // Сцепление с дорогой (меньше = легче сорваться)
         this.slipAngle = 0; // Угол скольжения
+<<<<<<< Updated upstream
         this.driftFactor = 0.2; // Насколько сильно сносит
         this.lateralFriction = 1.01; // Боковое трение для инерции в заносе
+=======
+        this.driftFactor = 0.20; // Насколько сильно сносит
+        this.lateralFriction = 0.4; // Боковое трение для инерции в заносе
+>>>>>>> Stashed changes
         
         // Размеры автомобиля
         this.width = 50;
@@ -87,16 +100,28 @@ class CarPhysics {
             steerAuthority = 1.0 + (1.5 * (1 - speedKmh / maxSpeedRef));
         }
         
+<<<<<<< Updated upstream
         const baseSteerForce = 0.6; // Базовая сила поворота
+=======
+        const baseSteerForce = 0.25; // Базовая сила поворота
+>>>>>>> Stashed changes
         const steerForce = this.steerInput * baseSteerForce * steerAuthority * dt;
         
         if (this.handbrake) {
             // На ручнике поворачиваем резче, но теряем сцепление и ЗАМЕДЛЯЕМСЯ
+<<<<<<< Updated upstream
             this.angularVelocity += this.steerInput * 0.8 * steerAuthority * dt;
             this.grip = 0.35;
             // Ручник тормозит задние колёса - сильное замедление
             this.velocityX *= 0.97;
             this.velocityY *= 0.97;
+=======
+            this.angularVelocity += this.steerInput * 0.3 * steerAuthority * dt;
+            this.grip = 0.80    ;
+            // Ручник тормозит задние колёса - сильное замедление
+            this.velocityX *= 0.98;
+            this.velocityY *= 0.98;
+>>>>>>> Stashed changes
         } else {
             this.angularVelocity += steerForce;
             this.grip = 0.35;
