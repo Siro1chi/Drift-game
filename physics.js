@@ -17,8 +17,8 @@ class CarPhysics {
         this.angularVelocity = 0;
         
         // Параметры автомобиля
-        this.maxSpeed = 1200; // пикселей в секунду
-        this.acceleration = 600; // Уменьшено ускорение для более реалистичной физики
+        this.maxSpeed = 1000; // пикселей в секунду
+        this.acceleration = 400; // Уменьшено ускорение для более реалистичной физики
         this.brakeForce = 600;
         this.friction = 0.96; // Сопротивление качению
         this.drag = 0.985; // Сопротивление воздуха
@@ -91,9 +91,12 @@ class CarPhysics {
         const steerForce = this.steerInput * baseSteerForce * steerAuthority * dt;
         
         if (this.handbrake) {
-            // На ручнике поворачиваем резче, но теряем сцепление
+            // На ручнике поворачиваем резче, но теряем сцепление и замедляемся
             this.angularVelocity += this.steerInput * 0.5 * steerAuthority * dt;
             this.grip = 0.65;
+            // Ручник тормозит, а не ускоряет
+            this.velocityX *= 0.97;
+            this.velocityY *= 0.97;
         } else {
             this.angularVelocity += steerForce;
             this.grip = 0.92;

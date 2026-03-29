@@ -217,7 +217,7 @@ function drawSmokeParticles() {
 
 // Обновление UI
 function updateUI() {
-    const speedKmh = (car.getSpeed() * 0.36).toFixed(0); // Конвертация в км/ч
+    const speedKmh = (car.getSpeed() * 0.18).toFixed(0); // Конвертация в км/ч (разделили на 2)
     speedElement.textContent = speedKmh;
     driftAngleElement.textContent = car.getDriftAngle();
     
