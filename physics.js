@@ -17,16 +17,16 @@ class CarPhysics {
         this.angularVelocity = 0;
         
         // Параметры автомобиля
-        this.maxSpeed = 800; // пикселей в секунду
-        this.acceleration = 300;
-        this.brakeForce = 500;
-        this.friction = 0.98; // Сопротивление качению
-        this.drag = 0.995; // Сопротивление воздуха
+        this.maxSpeed = 1200; // пикселей в секунду
+        this.acceleration = 800; // Увеличено ускорение
+        this.brakeForce = 600;
+        this.friction = 0.97; // Сопротивление качению
+        this.drag = 0.99; // Сопротивление воздуха
         
         // Параметры заноса
-        this.grip = 0.92; // Сцепление с дорогой (меньше = легче занос)
+        this.grip = 0.94; // Сцепление с дорогой (меньше = легче занос)
         this.slipAngle = 0; // Угол скольжения
-        this.driftFactor = 0.15; // Насколько сильно сносит
+        this.driftFactor = 0.12; // Насколько сильно сносит
         
         // Размеры автомобиля
         this.width = 50;
@@ -74,21 +74,21 @@ class CarPhysics {
             this.velocityY *= ratio;
         }
         
-        // Поворот (зависит от скорости)
-        const steerAuthority = Math.min(currentSpeed / 200, 1);
-        const steerForce = this.steerInput * 3 * steerAuthority * dt;
+        // Поворот (зависит от скорости) - уменьшена скорость поворота
+        const steerAuthority = Math.min(currentSpeed / 300, 1);
+        const steerForce = this.steerInput * 2.0 * steerAuthority * dt;
         
         if (this.handbrake) {
             // На ручнике поворачиваем резче, но теряем сцепление
-            this.angularVelocity += this.steerInput * 5 * dt;
+            this.angularVelocity += this.steerInput * 3.5 * dt;
             this.grip = 0.7;
         } else {
             this.angularVelocity += steerForce;
-            this.grip = 0.92;
+            this.grip = 0.94;
         }
         
-        // Затухание угловой скорости
-        this.angularVelocity *= 0.9;
+        // Затухание угловой скорости (увеличено для более плавного поворота)
+        this.angularVelocity *= 0.85;
         
         // Обновляем угол
         this.angle += this.angularVelocity;
