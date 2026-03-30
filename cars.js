@@ -6,7 +6,7 @@ const CarsConfig = {
         name: 'AE86 (Drift)',
         color: '#f5f5f5',
         roofColor: '#000000',
-        maxSpeed: 800,
+        maxSpeed: 850,
         acceleration: 1000,
         brakeForce: 3200,
         reverseSpeed: 400,

@@ -130,7 +130,7 @@ const camera = {
     x: 0,
     y: 0,
     smoothness: 0.1,
-    scale: 1.3
+    scale: 1.0  
 };
 
 function updateCamera(dt) {
@@ -216,10 +216,6 @@ function drawCar() {
 
     // Для AE86 рисуем фары и стоп-огни ПОД спрайтом корпуса
     if (carType === 'ae86') {
-        // Фары - яркие желтые
-        ctx.fillStyle = '#ffff00';
-        ctx.fillRect(car.width/2 +4, -car.height/2 + 2, 3, 6);
-        ctx.fillRect(car.width/2 +4, car.height/2 - 8, 3, 6);
 
         // Задние фонари
         ctx.fillStyle = '#ff4444';
@@ -368,7 +364,7 @@ function gameLoop(timestamp) {
 
 // Ночной фильтр - полупрозрачный тёмный overlay
 function drawNightFilter() {
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 }
 
@@ -395,32 +391,85 @@ document.addEventListener('keydown', initAudio, { once: true });
 // Глобальные функции для кнопок
 let audioEnabled = true;
 let musicEnabled = false;
+let musicVolume = 50;
+let sfxVolume = 70;
+window.trackNames = []; // Массив имён треков (заполняется при загрузке)
 
 function toggleAudio() {
     audioEnabled = !audioEnabled;
     Audio.setVolume('master', audioEnabled ? 0.7 : 0);
-    const btn = document.getElementById('audio-toggle');
-    btn.textContent = audioEnabled ? '🔊 Звук вкл' : '🔇 Звук выкл';
     initAudio();
 }
 
 async function toggleMusic() {
     musicEnabled = !musicEnabled;
-    const btn = document.getElementById('music-toggle');
-    
+    const btn = document.getElementById('play-btn');
+
     if (musicEnabled) {
-        btn.textContent = '🎵 Музыка вкл';
+        btn.textContent = '⏸';
         await initAudio();
-        Audio.playMusic();
+        Audio.playRandomTrack();
+        updateTrackName();
     } else {
-        btn.textContent = '🎵 Музыка выкл';
+        btn.textContent = '▶';
         Audio.stopMusic();
     }
 }
 
-// Делаем функции глобальными для HTML
+function setMusicVolume(value) {
+    musicVolume = parseInt(value);
+    Audio.setVolume('music', musicVolume / 100);
+}
+
+function setSfxVolume(value) {
+    sfxVolume = parseInt(value);
+    Audio.setVolume('engine', sfxVolume / 100);
+    Audio.setVolume('drift', sfxVolume / 100);
+}
+
+function prevTrack() {
+    if (!musicEnabled) {
+        toggleMusic();
+    }
+    Audio.prevTrack();
+    updateTrackName();
+}
+
+function nextTrack() {
+    if (!musicEnabled) {
+        toggleMusic();
+    }
+    Audio.nextTrack();
+    updateTrackName();
+}
+
+function playRandomTrack() {
+    musicEnabled = true;
+    const btn = document.getElementById('play-btn');
+    btn.textContent = '⏸';
+    initAudio();
+    Audio.playRandomTrack();
+    updateTrackName();
+}
+
+function updateTrackName() {
+    const trackNameEl = document.getElementById('track-name');
+    if (Audio.isInitialized() && Audio.getTrackCount() > 0 && window.trackNames.length > 0) {
+        const index = Audio.getCurrentTrackIndex();
+        trackNameEl.textContent = window.trackNames[index] || 'Неизвестный трек';
+    } else {
+        trackNameEl.textContent = 'Нет трека';
+    }
+}
+
+// Глобальные функции
 window.toggleAudio = toggleAudio;
 window.toggleMusic = toggleMusic;
+window.setMusicVolume = setMusicVolume;
+window.setSfxVolume = setSfxVolume;
+window.prevTrack = prevTrack;
+window.nextTrack = nextTrack;
+window.playRandomTrack = playRandomTrack;
 
 // Старт игры
 requestAnimationFrame(gameLoop);

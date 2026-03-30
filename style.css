@@ -62,3 +62,99 @@ body {
 .audio-controls button:hover {
     background: rgba(0, 0, 0, 0.7);
 }
+
+/* Магнитола */
+.radio {
+    margin-top: 20px;
+    pointer-events: auto;
+    background: linear-gradient(145deg, rgba(20, 20, 30, 0.9), rgba(10, 10, 15, 0.95));
+    border: 1px solid rgba(100, 150, 255, 0.3);
+    border-radius: 10px;
+    padding: 15px;
+    min-width: 280px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+}
+
+.track-name {
+    font-size: 14px;
+    color: #8fd3ff;
+    text-align: center;
+    padding: 8px;
+    margin-bottom: 12px;
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: bold;
+}
+
+.volume-controls {
+    margin-bottom: 12px;
+}
+
+.volume-slider {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.volume-slider label {
+    font-size: 12px;
+    min-width: 80px;
+    color: #ccc;
+}
+
+.volume-slider input[type="range"] {
+    flex: 1;
+    height: 6px;
+    -webkit-appearance: none;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+    outline: none;
+}
+
+.volume-slider input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    background: #4a9eff;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+.volume-slider input[type="range"]::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    background: #4a9eff;
+    border-radius: 50%;
+    cursor: pointer;
+    border: none;
+}
+
+.radio-controls {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+}
+
+.radio-controls button {
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(145deg, rgba(60, 80, 120, 0.8), rgba(30, 40, 70, 0.9));
+    border: 1px solid rgba(100, 150, 255, 0.4);
+    border-radius: 8px;
+    color: #fff;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.radio-controls button:hover {
+    background: linear-gradient(145deg, rgba(80, 120, 180, 0.9), rgba(40, 60, 100, 1));
+    box-shadow: 0 0 10px rgba(100, 150, 255, 0.5);
+}
+
+.radio-controls button:active {
+    transform: scale(0.95);
+}

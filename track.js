@@ -5,24 +5,45 @@ const Track = (function() {
     const checkpoints = [];
     const trackPoints = []; // сглаженные точки для отрисовки
 
-    // Генерация случайного закольцованного трека
+    // Генерация случайного закольцованного трека с разными участками
     function generateTrack() {
         checkpoints.length = 0;
         trackPoints.length = 0;
 
-        const numPoints = 80 + Math.floor(Math.random() * 40); // 80-120 контрольных точек (в 10 раз длиннее)
         const centerX = 0;
         const centerY = 0;
-        const baseRadius = 3000 + Math.random() * 1000; // 3000-4000 (огромный радиус)
-        const angleOffset = Math.random() * Math.PI * 2;
-
-        // Генерируем точки по кругу с вариациями
-        for (let i = 0; i < numPoints; i++) {
-            const angle = (i / numPoints) * Math.PI * 2 + angleOffset;
-            const radiusVariation = baseRadius + (Math.random() - 0.5) * 1500;
-            const x = centerX + Math.cos(angle) * radiusVariation;
-            const y = centerY + Math.sin(angle) * radiusVariation;
-            checkpoints.push({ x, y });
+        const baseRadius = 3000 + Math.random() * 1000; // 3000-4000
+        
+        // Генерируем 4-6 сегментов трассы с разными характеристиками
+        const numSegments = 4 + Math.floor(Math.random() * 3);
+        const segmentAngle = (Math.PI * 2) / numSegments;
+        
+        let currentAngle = Math.random() * Math.PI * 2; // Начальный угол
+        
+        for (let seg = 0; seg < numSegments; seg++) {
+            // Характеристики сегмента
+            const isWinding = Math.random() > 0.5; // Извилистый или плавный
+            const segmentPoints = 15 + Math.floor(Math.random() * 10); // 15-24 точки на сегмент
+            const amplitude = isWinding ? 400 + Math.random() * 300 : 100 + Math.random() * 150;
+            const frequency = isWinding ? 0.5 + Math.random() * 0.3 : 0.1 + Math.random() * 0.1;
+            
+            const startAngle = currentAngle;
+            const endAngle = currentAngle + segmentAngle;
+            
+            for (let i = 0; i < segmentPoints; i++) {
+                const t = i / segmentPoints;
+                const angle = startAngle + (endAngle - startAngle) * t;
+                
+                // Плавные вариации радиуса в пределах сегмента
+                const smoothVariation = Math.sin(t * Math.PI * frequency) * amplitude;
+                const radiusVariation = baseRadius + smoothVariation;
+                
+                const x = centerX + Math.cos(angle) * radiusVariation;
+                const y = centerY + Math.sin(angle) * radiusVariation;
+                checkpoints.push({ x, y });
+            }
+            
+            currentAngle = endAngle;
         }
 
         // Замыкаем трек - добавляем первые точки в конец для плавного перехода
@@ -37,11 +58,19 @@ const Track = (function() {
             const p2 = checkpoints[i + 2];
             const p3 = checkpoints[i + 3];
 
-            for (let t = 0; t < 1; t += 0.02) { // Очень маленький шаг для плавности
+            for (let t = 0; t < 1; t += 0.02) {
                 const x = catmullRom(p0.x, p1.x, p2.x, p3.x, t);
                 const y = catmullRom(p0.y, p1.y, p2.y, p3.y, t);
                 trackPoints.push({ x, y });
             }
+        }
+
+        // Смещаем трассу так, чтобы старт был в (0, 0)
+        const startX = trackPoints[0].x;
+        const startY = trackPoints[0].y;
+        for (let i = 0; i < trackPoints.length; i++) {
+            trackPoints[i].x -= startX;
+            trackPoints[i].y -= startY;
         }
 
         return trackPoints;

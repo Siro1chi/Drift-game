@@ -16,9 +16,26 @@
             Пробел - Ручник<br>
             1/2/3 - Выбор машины
         </div>
-        <div class="audio-controls">
-            <button id="audio-toggle" onclick="toggleAudio()">🔇 Вкл. звук</button>
-            <button id="music-toggle" onclick="toggleMusic()">🎵 Вкл. музыку</button>
+        
+        <!-- Магнитола -->
+        <div class="radio">
+            <div class="track-name" id="track-name">Нет трека</div>
+            <div class="volume-controls">
+                <div class="volume-slider">
+                    <label>🎵 Музыка</label>
+                    <input type="range" id="music-volume" min="0" max="100" value="50" onchange="setMusicVolume(this.value)">
+                </div>
+                <div class="volume-slider">
+                    <label>🔊 Звук</label>
+                    <input type="range" id="sfx-volume" min="0" max="100" value="70" onchange="setSfxVolume(this.value)">
+                </div>
+            </div>
+            <div class="radio-controls">
+                <button onclick="prevTrack()">⏮</button>
+                <button onclick="toggleMusic()" id="play-btn">▶</button>
+                <button onclick="nextTrack()">⏭</button>
+                <button onclick="playRandomTrack()">🔀</button>
+            </div>
         </div>
     </div>
     <canvas id="gameCanvas"></canvas>

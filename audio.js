@@ -49,6 +49,12 @@ const Audio = (function() {
 
             musicTracks.push(audioBuffer);
             console.log(`Loaded music track ${musicTracks.length}: ${url}`);
+            
+            // Обновляем UI с новым треком
+            if (window.updateTrackName) {
+                window.updateTrackName();
+            }
+            
             return audioBuffer;
         } catch (e) {
             console.warn('Failed to load music:', e);
@@ -93,6 +99,10 @@ const Audio = (function() {
             currentMusicIndex = (currentMusicIndex + 1) % musicTracks.length;
             if (currentMusic && currentMusic.source === source) {
                 playMusic();
+                // Обновляем название трека в UI
+                if (window.updateTrackName) {
+                    window.updateTrackName();
+                }
             }
         };
 
@@ -216,12 +226,13 @@ const Audio = (function() {
     function startDrift() {
         if (!audioContext || driftNodes) return;
 
-        // Создаём шум для визга шин
+        // Создаём многослойный шум для реалистичного звука шин
+        
+        // Слой 1: Розовый шум - основа звука
         const bufferSize = 2 * audioContext.sampleRate;
         const noiseBuffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
         const output = noiseBuffer.getChannelData(0);
 
-        // Розовый шум с характерным "скрипом"
         let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
         for (let i = 0; i < bufferSize; i++) {
             const white = Math.random() * 2 - 1;
@@ -232,38 +243,70 @@ const Audio = (function() {
             b4 = 0.55000 * b4 + white * 0.5329522;
             b5 = -0.7616 * b5 - white * 0.0168980;
             output[i] = b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362;
-            output[i] *= 0.11; // Компенсация громкости
+            output[i] *= 0.11;
             b6 = white * 0.115926;
         }
 
-        const noise = audioContext.createBufferSource();
-        noise.buffer = noiseBuffer;
-        noise.loop = true;
+        const noise1 = audioContext.createBufferSource();
+        noise1.buffer = noiseBuffer;
+        noise1.loop = true;
 
-        // Полосовой фильтр для характерного звука шин
-        const bandpass = audioContext.createBiquadFilter();
-        bandpass.type = 'bandpass';
-        bandpass.frequency.value = 500;
-        bandpass.Q.value = 0.8;
+        // Слой 2: Белый шум для резкости
+        const whiteNoiseBuffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
+        const whiteOutput = whiteNoiseBuffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+            whiteOutput[i] = Math.random() * 2 - 1;
+        }
 
-        // Высокие частоты для "скрипа"
+        const noise2 = audioContext.createBufferSource();
+        noise2.buffer = whiteNoiseBuffer;
+        noise2.loop = true;
+
+        // Фильтры для слоя 1 (основной тон шин)
+        const bandpass1 = audioContext.createBiquadFilter();
+        bandpass1.type = 'bandpass';
+        bandpass1.frequency.value = 600;
+        bandpass1.Q.value = 0.6;
+
+        // Фильтры для слоя 2 (резкость/скрип)
         const highpass = audioContext.createBiquadFilter();
         highpass.type = 'highpass';
-        highpass.frequency.value = 400;
+        highpass.frequency.value = 800;
+
+        const bandpass2 = audioContext.createBiquadFilter();
+        bandpass2.type = 'bandpass';
+        bandpass2.frequency.value = 1200;
+        bandpass2.Q.value = 0.5;
+
+        // Микшер слоёв
+        const mix1 = audioContext.createGain();
+        mix1.gain.value = 0.7;
+        const mix2 = audioContext.createGain();
+        mix2.gain.value = 0.4;
 
         const gainNode = audioContext.createGain();
         gainNode.gain.value = 0;
 
-        noise.connect(bandpass);
-        bandpass.connect(highpass);
-        highpass.connect(gainNode);
+        // Подключение
+        noise1.connect(bandpass1);
+        bandpass1.connect(mix1);
+
+        noise2.connect(highpass);
+        highpass.connect(bandpass2);
+        bandpass2.connect(mix2);
+
+        mix1.connect(gainNode);
+        mix2.connect(gainNode);
         gainNode.connect(masterGain);
-        noise.start();
+
+        noise1.start();
+        noise2.start();
 
         driftNodes = {
-            noise: noise,
-            bandpass: bandpass,
-            highpass: highpass,
+            noise1: noise1,
+            noise2: noise2,
+            bandpass1: bandpass1,
+            bandpass2: bandpass2,
             gain: gainNode
         };
     }
@@ -272,19 +315,23 @@ const Audio = (function() {
         if (!driftNodes || !audioContext) return;
 
         const now = audioContext.currentTime;
-        const targetGain = isDrifting ? volumes.drift * (Math.min(speed, 600) / 600) : 0;
-        
+        const speedFactor = Math.min(speed, 800) / 800;
+        const targetGain = isDrifting ? volumes.drift * (0.5 + speedFactor * 0.5) : 0;
+
         driftNodes.gain.gain.setTargetAtTime(targetGain, now, 0.05);
-        
-        // Частота фильтра зависит от скорости
-        const targetFreq = 600 + speed * 0.5;
-        driftNodes.bandpass.frequency.setTargetAtTime(targetFreq, now, 0.1);
+
+        // Частоты фильтров зависят от скорости - более высокий тон при большей скорости
+        const baseFreq = 500 + speed * 0.8;
+        driftNodes.bandpass1.frequency.setTargetAtTime(baseFreq, now, 0.1);
+        driftNodes.bandpass2.frequency.setTargetAtTime(baseFreq * 1.5, now, 0.1);
     }
 
     function stopDrift() {
         if (driftNodes) {
-            driftNodes.noise.stop();
-            driftNodes.noise.disconnect();
+            driftNodes.noise1.stop();
+            driftNodes.noise2.stop();
+            driftNodes.noise1.disconnect();
+            driftNodes.noise2.disconnect();
             driftNodes = null;
         }
     }
@@ -298,19 +345,63 @@ const Audio = (function() {
 
     // Загрузка звуков по умолчанию (только музыка)
     async function loadDefaultSounds() {
-        // Загрузка музыки из папки audio/music
+        // Загрузка музыки из папки audio/music - предпочитаем mp3, иначе ogg
         const musicFiles = [
-            'audio/music/Белая Ночь (Eurobeat ) .mp3'
+            'audio/music/Белая Ночь (Eurobeat ) .mp3',
+            'audio/music/Белая Ночь (Eurobeat ) .ogg'
         ];
+        
+        const loadedTracks = new Set(); // Для избежания дубликатов
+        
         for (const file of musicFiles) {
-            await loadMusic(file);
+            const trackName = file.split('/').pop().replace(/\.(mp3|ogg)$/i, '').trim();
+            
+            // Пропускаем если трек уже загружен
+            if (loadedTracks.has(trackName)) continue;
+            
+            const buffer = await loadMusic(file);
+            if (buffer) {
+                loadedTracks.add(trackName);
+                if (window.trackNames) {
+                    window.trackNames.push(trackName);
+                }
+            }
         }
+    }
+
+    // Воспроизведение случайного трека
+    function playRandomTrack() {
+        if (musicTracks.length === 0 || !audioContext) return null;
+        
+        // Выбираем случайный трек, отличный от текущего
+        let randomIndex;
+        if (musicTracks.length > 1) {
+            do {
+                randomIndex = Math.floor(Math.random() * musicTracks.length);
+            } while (randomIndex === currentMusicIndex && musicTracks.length > 1);
+        } else {
+            randomIndex = 0;
+        }
+        
+        currentMusicIndex = randomIndex;
+        return playMusic();
+    }
+
+    // Получить индекс текущего трека
+    function getCurrentTrackIndex() {
+        return currentMusicIndex;
+    }
+
+    // Получить количество треков
+    function getTrackCount() {
+        return musicTracks.length;
     }
 
     return {
         init,
         loadMusic,
         playMusic,
+        playRandomTrack,
         stopMusic,
         nextTrack,
         prevTrack,
@@ -324,6 +415,8 @@ const Audio = (function() {
         stopDrift,
         resume,
         loadDefaultSounds,
-        isInitialized: () => isInitialized
+        isInitialized: () => isInitialized,
+        getCurrentTrackIndex,
+        getTrackCount
     };
 })();
