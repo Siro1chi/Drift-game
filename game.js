@@ -280,27 +280,45 @@ function drawCar() {
     }
 
     if (carType === 'ae86') {
-        // AE86: отрисовка спрайта
-        const scale = 1.5;
-        ctx.save();
-        ctx.rotate(Math.PI/2); // 90 градусов вправо
-        ctx.drawImage(carSprites.ae86, -car.height/2 * scale, -car.width/2 * scale, car.height * scale, car.width * scale);
-        ctx.restore();
+        if (carSprites.ae86) {
+            const scale = 1.5;
+            ctx.save();
+            ctx.rotate(Math.PI/2);
+            ctx.drawImage(carSprites.ae86, -car.height/2 * scale, -car.width/2 * scale, car.height * scale, car.width * scale);
+            ctx.restore();
+        } else {
+            ctx.fillStyle = '#f5f5f5';
+            ctx.fillRect(-car.width/2, -car.height/2, car.width, car.height);
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(-car.width/6, -car.height/2 + 3, car.width/2, car.height - 6);
+        }
     } else if (carType === 'silvia') {
-        // Silvia: отрисовка спрайта
-        const scale = 2.0;
-        ctx.save();
-        ctx.rotate(Math.PI/2); // 90 градусов вправо
-        ctx.drawImage(carSprites.silvia, -car.height/2.2 * scale, -car.width/2 * scale, car.height * scale, car.width * scale);
-        ctx.restore();
+        if (carSprites.silvia) {
+            const scale = 2.0;
+            ctx.save();
+            ctx.rotate(Math.PI/2);
+            ctx.drawImage(carSprites.silvia, -car.height/2.2 * scale, -car.width/2 * scale, car.height * scale, car.width * scale);
+            ctx.restore();
+        } else {
+            ctx.fillStyle = '#e8e8e8';
+            ctx.fillRect(-car.width/2, -car.height/2, car.width, car.height);
+            ctx.fillStyle = '#1a1a3a';
+            ctx.fillRect(-car.width/6, -car.height/2 + 3, car.width/2, car.height - 6);
+        }
     } else if (carType === 'gripMachine') {
-        // Dodge: отрисовка спрайта
-        const scale = 2.0;
-        ctx.save();
-        ctx.rotate(Math.PI/2); // 90 градусов вправо
-        ctx.scale(1, 0.8); // Сжимаем по вертикали
-        ctx.drawImage(carSprites.dodge, -car.height/2 * scale, -car.width/2 * scale, car.height * scale, car.width * scale);
-        ctx.restore();
+        if (carSprites.dodge) {
+            const scale = 2.0;
+            ctx.save();
+            ctx.rotate(Math.PI/2);
+            ctx.scale(1, 0.8);
+            ctx.drawImage(carSprites.dodge, -car.height/2.2 * scale, -car.width/2 * scale, car.height * scale, car.width * scale);
+            ctx.restore();
+        } else {
+            ctx.fillStyle = '#ffcc00';
+            ctx.fillRect(-car.width/2, -car.height/2, car.width, car.height);
+            ctx.fillStyle = '#333333';
+            ctx.fillRect(-car.width/6, -car.height/2 + 3, car.width/2, car.height - 6);
+        }
     } else {
         // Заглушка для неизвестных машин
         ctx.fillStyle = bodyColor;
