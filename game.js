@@ -346,27 +346,13 @@ function drawSmokeParticles() {
 
 // Обновление UI
 function updateUI() {
-    const speedKmh = (car.getSpeed() * 0.09).toFixed(0);
+    const speedKmh = (car.getSpeed() * 0.07).toFixed(0); // Конвертация в км/ч
     speedElement.textContent = speedKmh;
     driftAngleElement.textContent = car.getDriftAngle();
 
-    // Обновление передачи и RPM
+    // Обновление передачи
     const gearElement = document.getElementById('gear');
-    const rpmElement = document.getElementById('rpm');
     if (gearElement) gearElement.textContent = car.getGear();
-    if (rpmElement) rpmElement.textContent = Math.round(car.getRpm());
-
-    // Цвет RPM - красный если близко к отсечке
-    if (rpmElement) {
-        const rpm = car.getRpm();
-        if (rpm > car.maxRpm * 0.9) {
-            rpmElement.parentElement.style.color = '#ff4444';
-        } else if (rpm > car.maxRpm * 0.75) {
-            rpmElement.parentElement.style.color = '#ffaa00';
-        } else {
-            rpmElement.parentElement.style.color = '#fff';
-        }
-    }
 
     if (car.isDrifting()) {
         driftAngleElement.parentElement.style.color = '#ffcc00';

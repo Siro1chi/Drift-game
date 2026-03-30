@@ -25,6 +25,8 @@ const CarsConfig = {
         gearRatios: [0, 3.8, 2.3, 1.5, 1.0, 0.72], // 1-я тяговая, 5-я скоростная
         finalDrive: 4.3, // Главная пара для лучшей динамики
         rpmPowerBand: [2000, 7000],
+        // Индивидуальная таблица скоростей по передачам (% от maxSpeed)
+        gearSpeedTable: [0, 0.25, 0.45, 0.70, 0.90, 1.10],
     },
 
     // 2. Silvia — трасса-машина: высокая макс скорость, мало теряет в дрифте
@@ -32,8 +34,8 @@ const CarsConfig = {
         name: 'Silvia (Speed)',
         color: '#e8e8e8',
         roofColor: '#1a1a3a',
-        maxSpeed: 1200,
-        acceleration: 800,
+        maxSpeed: 2200,  // Увеличена максималка
+        acceleration: 850,
         brakeForce: 2800,
         reverseSpeed: 400,
         linearDrag: 0.65,
@@ -46,11 +48,13 @@ const CarsConfig = {
         wheelResponseDrop: 0.75,
         lateralGrip: 9.0,
         handbrakeLateralGrip: 2.0,
-        // 6-ступенчатая КПП
+        // 6-ступенчатая КПП - для высокой максималки
         gears: 6,
-        gearRatios: [0, 3.8, 2.5, 1.8, 1.4, 1.1, 0.9],
-        finalDrive: 3.7,
+        gearRatios: [0, 4.0, 2.6, 1.8, 1.3, 1.0, 0.78], // 1-3 короткие, 4-6 длинные
+        finalDrive: 3.9,
         rpmPowerBand: [2500, 7500],
+        // Индивидуальная таблица скоростей по передачам (% от maxSpeed)
+        gearSpeedTable: [0, 0.18, 0.35, 0.55, 0.75, 0.90, 1.05],
     },
 
     // 3. Grip Machine — гриповая машина
@@ -77,6 +81,8 @@ const CarsConfig = {
         gearRatios: [0, 3.2, 2.2, 1.6, 1.2, 1.0, 0.85],
         finalDrive: 3.9,
         rpmPowerBand: [3000, 8000],
+        // Индивидуальная таблица скоростей по передачам
+        gearSpeedTable: [0, 0.20, 0.40, 0.65, 0.85, 1.0, 1.15],
     }
 };
 
@@ -95,6 +101,10 @@ function applyCarConfig(car, configType = 'ae86') {
         }
     });
 
+    // Принудительно применяем maxSpeed и acceleration
+    car.maxSpeed = config.maxSpeed;
+    car.acceleration = config.acceleration;
+
     // Применяем параметры КПП
     if (config.gears) car.maxGears = config.gears;
     if (config.gearRatios) car.gearRatios = config.gearRatios;
@@ -103,6 +113,7 @@ function applyCarConfig(car, configType = 'ae86') {
         car.minRpmPower = config.rpmPowerBand[0];
         car.maxRpmPower = config.rpmPowerBand[1];
     }
+    if (config.gearSpeedTable) car.gearSpeedTable = config.gearSpeedTable;
 
     car.carType = configType;
     car.carName = config.name;

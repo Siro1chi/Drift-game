@@ -23,7 +23,7 @@ class CarPhysics {
         this.reverseSpeed = 200; // макс скорость заднего хода (px/s)
 
         // Дампинг / сопротивления (коэффициенты в единицах 1/с)
-        this.linearDrag = 1.1; // общее продольное сопротивление (баланс инерции и сопротивления)
+        this.linearDrag = 0.02; // общее продольное сопротивление (воздух + качение) - очень маленькое
         this.angularDrag = 3.0; // затухание угловой скорости
         this.driftSpeedLoss = 0.3; // потеря скорости при дрифте (в единицах 1/с)
 
@@ -67,6 +67,7 @@ class CarPhysics {
         this.maxRpmPower = 6500;
         this.shiftCooldown = 0;
         this.clutchEngaged = true;
+        this.gearSpeedTable = [0, 0.22, 0.45, 0.75, 1.05, 1.3, 1.5]; // по умолчанию
     }
 
     // Переключение передач
@@ -135,56 +136,55 @@ class CarPhysics {
         this.frontWheelAngle += wheelDelta;
 
         // === Расчёт оборотов двигателя ===
-        // В реальности RPM привязаны к скорости через передачу
-        // Используем коэффициент масштабирования для конвертации px/s в "игровые" км/ч
-        const speedScale = 0.05; // Конвертация px/s в условные м/с
-        const wheelRadius = 0.3; // метра
-        const speedMps = Math.abs(forwardVel) * speedScale;
-        const rpmFromSpeed = (speedMps * this.gearRatios[this.currentGear] * this.finalDrive * 60) / (2 * Math.PI * wheelRadius);
+        // RPM привязаны к скорости через передачу, но могут "подниматься" при разгоне
+        const speedKmh = Math.abs(forwardVel) * 0.18; // Примерная конвертация в км/ч
+        
+        // Базовые RPM от скорости и передачи
+        const baseRpmFromSpeed = this.idleRpm + (speedKmh * this.gearRatios[this.currentGear] * this.finalDrive * 8);
         
         if (this.throttle && this.clutchEngaged) {
             // При газе RPM стремятся к рабочим + растут от скорости
-            const targetRpm = Math.max(rpmFromSpeed, this.minRpmPower + (this.maxRpmPower - this.minRpmPower) * 0.7);
-            this.rpm = Math.min(this.maxRpm, this.rpm + (targetRpm - this.rpm) * dt * 4);
+            // Чем ниже передача, тем быстрее растут RPM
+            const gearFactor = this.gearRatios[this.currentGear] / this.gearRatios[1];
+            const targetRpm = Math.max(baseRpmFromSpeed, this.minRpmPower + (this.maxRpmPower - this.minRpmPower) * (0.5 + 0.5 * gearFactor));
+            this.rpm = Math.min(this.maxRpm, this.rpm + (targetRpm - this.rpm) * dt * (2 + 3 * gearFactor));
         } else if (this.clutchEngaged) {
-            // Без газа RPM падают к значению от скорости, но не ниже холостых
-            this.rpm = Math.max(this.idleRpm, rpmFromSpeed);
+            // Без газа RPM падают к значению от скорости
+            this.rpm = Math.max(this.idleRpm, baseRpmFromSpeed);
         } else {
             // Сцепление выжато - RPM плавно падают
-            this.rpm = Math.max(this.idleRpm, this.rpm - dt * 800);
+            this.rpm = Math.max(this.idleRpm, this.rpm - dt * 1000);
         }
 
-        // Автоматическое переключение - только по достижении макс. оборотов
-        if (this.clutchEngaged && this.shiftCooldown <= 0) {
-            if (this.rpm >= this.maxRpm && this.currentGear < this.maxGears) {
-                this.shiftGear(true);
-            } else if (this.rpm <= this.idleRpm + 300 && this.currentGear > 1) {
-                this.shiftGear(false);
-            }
-        }
+        // Автоматическое переключение отключено - игрок переключается сам
 
-        // Движение вперед/назад (двигатель) - ускорение зависит от передачи
+        // Движение вперед/назад (двигатель) - ускорение зависит от передачи и RPM
         if (this.throttle && this.clutchEngaged) {
             const gearRatio = this.gearRatios[this.currentGear];
-            // Мощность зависит от RPM
+            // Мощность зависит от RPM (пик в рабочем диапазоне)
             const rpmRange = this.maxRpmPower - this.minRpmPower;
             const rpmPos = (this.rpm - this.minRpmPower) / rpmRange;
-            const rpmFactor = Math.max(0.5, 0.7 + 0.3 * (1 - Math.pow(Math.min(1, rpmPos * 2 - 1), 2)));
-            
+            const rpmFactor = Math.max(0.6, 0.7 + 0.3 * (1 - Math.pow(Math.min(1, rpmPos * 2 - 1), 2)));
+
             // Ускорение: на низких передачах больше, на высоких меньше
-            const gearFactor = Math.pow(gearRatio, 0.4);
-            const powerMultiplier = gearFactor * rpmFactor * 0.8;
-            
+            const gearFactor = Math.pow(gearRatio, 0.35);
+            const powerMultiplier = gearFactor * rpmFactor * 1.0; // Увеличенный множитель
+
             forwardVel += this.acceleration * powerMultiplier * dt;
         }
 
-        // Ограничение максимальной скорости для текущей передачи
-        // Чем выше передача (меньше gearRatio), тем выше макс. скорость
-        const gearRatio = this.gearRatios[this.currentGear];
-        const maxSpeedForGear = ((this.maxRpm * 2 * Math.PI * wheelRadius) / (gearRatio * this.finalDrive * 60)) / speedScale;
+        // === АРКАДНОЕ ограничение скорости для передачи ===
+        // Каждая передача имеет предел скорости (индивидуальная таблица для каждой машины)
+        const gearSpeedTable = this.gearSpeedTable || [0, 0.22, 0.45, 0.75, 1.05, 1.3, 1.5];
+        const maxSpeedForGear = this.maxSpeed * gearSpeedTable[this.currentGear];
+        
         if (forwardVel > maxSpeedForGear) {
             forwardVel = maxSpeedForGear;
         }
+
+        // Сопротивление воздуха - растёт с квадратом скорости
+        const airResistance = 0.000001 * forwardVel * forwardVel;
+        forwardVel -= airResistance * dt;
 
         // Задний ход - только клавиша S
         if (input.down) {
@@ -198,8 +198,7 @@ class CarPhysics {
             }
         }
 
-        // Ограничение продольной скорости
-        if (forwardVel > this.maxSpeed) forwardVel = this.maxSpeed;
+        // Ограничение продольной скорости - только для заднего хода
         if (forwardVel < -this.reverseSpeed) forwardVel = -this.reverseSpeed;
 
         // Определяем, начинаем ли мы дрифтать "переходом"
