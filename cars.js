@@ -33,7 +33,7 @@ const CarsConfig = {
         reverseSpeed: 400,
         linearDrag: 0.65,
         angularDrag: 3.0,
-        driftSpeedLoss: 0.15,
+        driftSpeedLoss: 0.25,
         steerSpeed: 6.5,
         handbrakeSteerFactor: 1.5,
         maxWheelAngle: Math.PI / 6, // ~30 градусов
