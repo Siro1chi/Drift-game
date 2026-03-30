@@ -6,6 +6,9 @@ const ctx = canvas.getContext('2d');
 // Элементы UI
 const carNameElement = document.getElementById('car-name');
 const speedElement = document.getElementById('speed');
+const timerElement = document.getElementById('timer');
+const scoreElement = document.getElementById('score');
+const gearElement = document.getElementById('gear');
 const driftAngleElement = document.getElementById('drift-angle');
 
 // Настройка размера канваса
@@ -63,6 +66,17 @@ const input = {
     shiftUp: false,
     shiftDown: false
 };
+
+// Таймер и очки
+let timer = 0;
+let timerRunning = false;
+let score = 0;
+let lastCrossTime = 0;
+const CROSS_COOLDOWN = 1.0; // секунды
+
+// Рекорды
+const RECORDS_KEY = 'drift_game_records';
+let records = JSON.parse(localStorage.getItem(RECORDS_KEY)) || [];
 
 let currentCarType = 'ae86'; // тип текущей машины
 
@@ -387,19 +401,20 @@ function drawSmokeParticles() {
 
 // Обновление UI
 function updateUI() {
-    const speedKmh = (car.getSpeed() * 0.07).toFixed(0); // Конвертация в км/ч
-    speedElement.textContent = speedKmh;
-    driftAngleElement.textContent = car.getDriftAngle();
+    const speedKmh = (car.getSpeed() * 0.15).toFixed(0);
+    if (speedElement) speedElement.textContent = speedKmh;
 
     // Обновление передачи
-    const gearElement = document.getElementById('gear');
     if (gearElement) gearElement.textContent = car.getGear();
-
-    if (car.isDrifting()) {
-        driftAngleElement.parentElement.style.color = '#ffcc00';
-    } else {
-        driftAngleElement.parentElement.style.color = '#fff';
+    
+    // Обновление таймера
+    if (timerElement) {
+        timerElement.textContent = timer.toFixed(3);
+        timerElement.parentElement.style.color = timerRunning ? '#44ff44' : '#fff';
     }
+    
+    // Обновление очков
+    if (scoreElement) scoreElement.textContent = Math.floor(score);
 }
 
 // Игровой цикл
@@ -425,6 +440,25 @@ function gameLoop(timestamp) {
         Audio.updateDrift(car.isDrifting(), car.getSpeed());
     }
     
+    // Обновление таймера и очков
+    if (timerRunning) {
+        timer += dt;
+        // Очки начисляются только на трассе
+        if (!Track.isOffTrack(car.x, car.y)) {
+            score += dt * 10; // 10 очков в секунду
+            
+            // Бонусные очки за дрифт
+            if (car.isDrifting()) {
+                const driftAngle = Math.abs(car.slipAngle) * 180 / Math.PI;
+                const driftBonus = driftAngle * dt * 2; // 2 очка за градус дрифта в секунду
+                score += driftBonus;
+            }
+        }
+    }
+    
+    // Проверка пересечения стартовой линии
+    checkStartLineCross();
+
     // Применение камеры
     ctx.save();
     ctx.scale(camera.scale, camera.scale);
@@ -558,6 +592,115 @@ window.prevTrack = prevTrack;
 window.nextTrack = nextTrack;
 window.playRandomTrack = playRandomTrack;
 
+// Проверка пересечения стартовой линии
+function checkStartLineCross() {
+    const now = Date.now() / 1000;
+    if (now - lastCrossTime < CROSS_COOLDOWN) return;
+    
+    // Стартовая линия в точке (0, 0) с допуском 150px
+    const distToStart = Math.sqrt(car.x * car.x + car.y * car.y);
+    if (distToStart < 150) {
+        lastCrossTime = now;
+        
+        if (timerRunning) {
+            // Финиш - останавливаем таймер
+            timerRunning = false;
+            
+            // Сохраняем рекорд
+            const record = {
+                time: timer,
+                car: CarsConfig[currentCarType].name,
+                date: new Date().toLocaleDateString()
+            };
+            saveRecord(record);
+        } else {
+            // Старт - запускаем таймер
+            timerRunning = true;
+            timer = 0;
+            score = 0;
+        }
+        updateRecordsDisplay();
+    }
+}
+
+// Сохранение рекорда
+function saveRecord(record) {
+    record.score = score; // Добавляем очки в рекорд
+    records.push(record);
+    records.sort((a, b) => (b.score / b.time) - (a.score / a.time)); // Сортируем по результативности
+    records = records.slice(0, 10); // Храним топ-10
+    localStorage.setItem(RECORDS_KEY, JSON.stringify(records));
+}
+
+// Обновление таблицы рекордов
+function updateRecordsDisplay() {
+    const recordsList = document.getElementById('records-list');
+    if (!recordsList) return;
+    
+    if (records.length === 0) {
+        recordsList.innerHTML = '<div style="opacity: 0.5; text-align: center; padding: 8px;">Нет рекордов</div>';
+        return;
+    }
+    
+    // Заголовок таблицы
+    let html = `
+        <div class="record-header">
+            <span>#</span>
+            <span>Машина</span>
+            <span>Время</span>
+            <span>Очки</span>
+            <span>Рез-ть</span>
+        </div>
+    `;
+    
+    // Рекорды
+    html += records.slice(0, 5).map((r, i) => {
+        const efficiency = r.score / r.time;
+        return `
+            <div class="record-item ${i === 0 ? 'best' : ''}">
+                <span>${i + 1}</span>
+                <span>${r.car}</span>
+                <span>${r.time.toFixed(2)}с</span>
+                <span>${Math.floor(r.score)}</span>
+                <span>${efficiency.toFixed(1)}</span>
+            </div>
+        `;
+    }).join('');
+    
+    recordsList.innerHTML = html;
+}
+
 // Старт игры
+updateRecordsDisplay(); // Показываем рекорды при загрузке
+
+// Мобильное управление
+function setupMobileControls() {
+    const btnUp = document.getElementById('btn-up');
+    const btnDown = document.getElementById('btn-down');
+    const btnLeft = document.getElementById('btn-left');
+    const btnRight = document.getElementById('btn-right');
+    const btnHandbrake = document.getElementById('btn-handbrake');
+    const btnShiftUp = document.getElementById('btn-shift-up');
+    const btnShiftDown = document.getElementById('btn-shift-down');
+    
+    function addTouchEvents(btn, inputKey) {
+        if (!btn) return;
+        btn.addEventListener('touchstart', (e) => { e.preventDefault(); input[inputKey] = true; });
+        btn.addEventListener('touchend', (e) => { e.preventDefault(); input[inputKey] = false; });
+        btn.addEventListener('mousedown', (e) => { input[inputKey] = true; });
+        btn.addEventListener('mouseup', (e) => { input[inputKey] = false; });
+        btn.addEventListener('mouseleave', (e) => { input[inputKey] = false; });
+    }
+    
+    addTouchEvents(btnUp, 'up');
+    addTouchEvents(btnDown, 'down');
+    addTouchEvents(btnLeft, 'left');
+    addTouchEvents(btnRight, 'right');
+    addTouchEvents(btnHandbrake, 'handbrake');
+    addTouchEvents(btnShiftUp, 'shiftUp');
+    addTouchEvents(btnShiftDown, 'shiftDown');
+}
+
+setupMobileControls();
 requestAnimationFrame(gameLoop);
 

@@ -8,15 +8,36 @@
 </head>
 <body>
     <div id="ui">
-        <div class="stat">Машина: <span id="car-name">AE86 (Drift)</span></div>
-        <div class="stat">Скорость: <span id="speed">0</span> км/ч</div>
-        <div class="stat">Угол заноса: <span id="drift-angle">0</span>°</div>
-        <div class="stat">Передача: <span id="gear">1</span></div>
-        <div class="controls-hint">
-            WASD / Стрелки - Управление<br>
-            Пробел - Ручник<br>
-            E/Q - Переключение передач<br>
-            1/2/3 - Выбор машины
+        <div class="stat-row">
+            <div class="stat">🚗 <span id="car-name">AE86</span></div>
+            <div class="stat">⏱ <span id="timer">0.000</span></div>
+            <div class="stat">👑 <span id="score">0</span></div>
+        </div>
+        <div class="leaderboard">
+            <h3>🏆 Топ-5</h3>
+            <div id="records-list"></div>
+        </div>
+    </div>
+    
+    <!-- Мобильное управление -->
+    <div id="mobile-controls">
+        <div class="control-pad">
+            <button class="ctrl-btn" id="btn-up">▲</button>
+            <div class="ctrl-row">
+                <button class="ctrl-btn" id="btn-left">◀</button>
+                <button class="ctrl-btn" id="btn-right">▶</button>
+            </div>
+            <button class="ctrl-btn" id="btn-down">▼</button>
+        </div>
+        <div class="action-pad">
+            <button class="action-btn" id="btn-handbrake">🛑</button>
+            <button class="action-btn" id="btn-shift-up">⬆</button>
+            <button class="action-btn" id="btn-shift-down">⬇</button>
+        </div>
+        <div class="car-select">
+            <button class="car-btn" onclick="changeCar('ae86')">1</button>
+            <button class="car-btn" onclick="changeCar('silvia')">2</button>
+            <button class="car-btn" onclick="changeCar('gripMachine')">3</button>
         </div>
     </div>
     

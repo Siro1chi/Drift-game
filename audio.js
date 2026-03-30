@@ -390,7 +390,7 @@ const Audio = (function() {
 
     // Загрузка звуков по умолчанию (только музыка)
     async function loadDefaultSounds() {
-        // Загрузка всех треков из папки audio/music
+        // Загрузка музыки из папки audio/music
         const musicFiles = [
             'audio/music/Hacking To The Gate.mp3',
             'audio/music/Holding Out for a Hero _ Eurobeat.mp3',
@@ -405,13 +405,21 @@ const Audio = (function() {
             
             if (loadedTracks.has(trackName)) continue;
             
-            const buffer = await loadMusic(file);
-            if (buffer) {
-                loadedTracks.add(trackName);
-                if (window.trackNames) {
-                    window.trackNames.push(trackName);
+            try {
+                const buffer = await loadMusic(file);
+                if (buffer) {
+                    loadedTracks.add(trackName);
+                    if (window.trackNames) {
+                        window.trackNames.push(trackName);
+                    }
                 }
+            } catch (e) {
+                console.log(`Music file not available (need local server): ${file}`);
             }
+        }
+        
+        if (loadedTracks.size === 0) {
+            console.log('No music files loaded. Use local server for music playback.');
         }
     }
 
