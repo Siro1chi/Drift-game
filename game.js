@@ -20,7 +20,7 @@ window.addEventListener('resize', resizeCanvas);
 const carSprites = {};
 function loadCarSprites() {
     console.log('Loading car sprites...');
-    
+
     const ae86Img = new Image();
     ae86Img.src = 'AE86.png';
     ae86Img.onload = () => {
@@ -30,7 +30,7 @@ function loadCarSprites() {
     ae86Img.onerror = () => {
         console.warn('Failed to load AE86.png');
     };
-    
+
     const silviaImg = new Image();
     silviaImg.src = 'Silvia.png';
     silviaImg.onload = () => {
@@ -39,6 +39,16 @@ function loadCarSprites() {
     };
     silviaImg.onerror = () => {
         console.warn('Failed to load Silvia.png');
+    };
+
+    const dodgeImg = new Image();
+    dodgeImg.src = 'Dodge.png';
+    dodgeImg.onload = () => {
+        carSprites.dodge = dodgeImg;
+        console.log('Dodge sprite loaded successfully');
+    };
+    dodgeImg.onerror = () => {
+        console.warn('Failed to load Dodge.png');
     };
 }
 loadCarSprites();
@@ -277,24 +287,31 @@ function drawCar() {
         ctx.rotate(Math.PI/2); // 90 градусов вправо
         ctx.drawImage(carSprites.silvia, -car.height/2.2 * scale, -car.width/2 * scale, car.height * scale, car.width * scale);
         ctx.restore();
+    } else if (carType === 'gripMachine') {
+        // Dodge: отрисовка спрайта
+        const scale = 2.0;
+        ctx.save();
+        ctx.rotate(Math.PI/2); // 90 градусов вправо
+        ctx.scale(1, 0.8); // Сжимаем по вертикали
+        ctx.drawImage(carSprites.dodge, -car.height/2 * scale, -car.width/2 * scale, car.height * scale, car.width * scale);
+        ctx.restore();
     } else {
-        // Grip: простой прямоугольник
+        // Заглушка для неизвестных машин
         ctx.fillStyle = bodyColor;
         ctx.fillRect(-car.width/2, -car.height/2, car.width, car.height);
-
         ctx.fillStyle = roofColor;
         ctx.fillRect(-car.width/6, -car.height/2 + 3, car.width/2, car.height - 6);
     }
 
-    // Фары - яркие желтые (для всех кроме AE86 и Silvia, которые рисуют их под спрайтом)
-    if (carType !== 'ae86' && carType !== 'silvia') {
+    // Фары - яркие желтые (для всех кроме AE86, Silvia и Dodge, которые рисуют их под спрайтом)
+    if (carType !== 'ae86' && carType !== 'silvia' && carType !== 'gripMachine') {
         ctx.fillStyle = '#51ceff';
         ctx.fillRect(car.width/2 - 3, -car.height/2 + 2, 3, 6);
         ctx.fillRect(car.width/2 - 3, car.height/2 - 8, 3, 6);
     }
 
-    // Задние фонали (для Grip - они внутри корпуса, для AE86 и Silvia уже нарисованы под спрайтом)
-    if (carType !== 'ae86' && carType !== 'silvia') {
+    // Задние фонали (для Dodge, AE86 и Silvia уже нарисованы под спрайтом)
+    if (carType !== 'ae86' && carType !== 'silvia' && carType !== 'gripMachine') {
         ctx.fillStyle = '#ff4444';
         ctx.fillRect(-car.width/2, -car.height/2 + 2, 3, 6);
         ctx.fillRect(-car.width/2, car.height/2 - 8, 3, 6);
@@ -418,11 +435,11 @@ async function initAudio() {
     if (audioInitialized) return;
     Audio.init();
     Audio.resume();
-    
+
     // Загрузка музыки и звуков
     await Audio.loadDefaultSounds();
-    
-    Audio.startEngine();
+
+    Audio.startEngine(currentCarType);
     Audio.startDrift();
     audioInitialized = true;
     console.log('Audio initialized');

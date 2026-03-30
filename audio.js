@@ -137,6 +137,11 @@ const Audio = (function() {
             }
         } else if (volumes.hasOwnProperty(type)) {
             volumes[type] = Math.max(0, Math.min(1, value));
+            
+            // Применяем громкость к текущей музыке
+            if (type === 'music' && currentMusic) {
+                currentMusic.gainNode.gain.value = volumes.music;
+            }
         }
     }
 
@@ -148,17 +153,26 @@ const Audio = (function() {
     // === СИНТЕЗ ЗВУКА ДВИГАТЕЛЯ ===
     let engineNodes = null;
 
-    function startEngine() {
+    function startEngine(carType = 'ae86') {
         if (!audioContext || engineNodes) return;
 
-        // Создаём узел для двигателя - низкий рычащий звук
+        // Настройки двигателя для разных машин
+        const engineConfig = {
+            ae86: { baseFreq: 60, filterFreq: 350, lfoFreq: 18, lfoGain: 40 },
+            silvia: { baseFreq: 50, filterFreq: 300, lfoFreq: 12, lfoGain: 60 },
+            gripMachine: { baseFreq: 35, filterFreq: 250, lfoFreq: 10, lfoGain: 70 } // Dodge - низкий бас
+        };
+        
+        const config = engineConfig[carType] || engineConfig.ae86;
+
+        // Создаём узел для двигателя
         const baseOsc = audioContext.createOscillator();
         baseOsc.type = 'sawtooth';
-        baseOsc.frequency.value = 50;
+        baseOsc.frequency.value = config.baseFreq;
 
         const filter = audioContext.createBiquadFilter();
         filter.type = 'lowpass';
-        filter.frequency.value = 300;
+        filter.frequency.value = config.filterFreq;
         filter.Q.value = 1.5;
 
         const gainNode = audioContext.createGain();
@@ -167,9 +181,9 @@ const Audio = (function() {
         // LFO для модуляции (вибрация двигателя)
         const lfo = audioContext.createOscillator();
         lfo.type = 'sine';
-        lfo.frequency.value = 15;
+        lfo.frequency.value = config.lfoFreq;
         const lfoGain = audioContext.createGain();
-        lfoGain.gain.value = 50;
+        lfoGain.gain.value = config.lfoGain;
 
         baseOsc.connect(filter);
         filter.connect(gainNode);
@@ -186,7 +200,8 @@ const Audio = (function() {
             filter: filter,
             gain: gainNode,
             lfo: lfo,
-            lfoGain: lfoGain
+            lfoGain: lfoGain,
+            carType: carType
         };
     }
 
@@ -194,15 +209,24 @@ const Audio = (function() {
         if (!engineNodes || !audioContext) return;
 
         const now = audioContext.currentTime;
+        
+        // Настройки для разных машин
+        const engineConfig = {
+            ae86: { baseFreq: 60, filterOpen: 700, filterClosed: 350 },
+            silvia: { baseFreq: 50, filterOpen: 600, filterClosed: 300 },
+            gripMachine: { baseFreq: 35, filterOpen: 500, filterClosed: 250 }
+        };
+        
+        const config = engineConfig[engineNodes.carType] || engineConfig.ae86;
 
-        // Частота зависит от скорости - низкий тон
-        const baseFreq = 50 + speed * 0.1;
+        // Частота зависит от скорости
+        const baseFreq = config.baseFreq + speed * 0.1;
         const targetFreq = throttle > 0 ? baseFreq + 30 : baseFreq;
 
         engineNodes.osc.frequency.setTargetAtTime(targetFreq, now, 0.1);
 
         // Фильтр открывается при газе
-        const targetFilter = throttle > 0 ? 600 : 350;
+        const targetFilter = throttle > 0 ? config.filterOpen : config.filterClosed;
         engineNodes.filter.frequency.setTargetAtTime(targetFilter, now, 0.1);
 
         // Громкость

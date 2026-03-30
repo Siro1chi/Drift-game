@@ -57,9 +57,9 @@ const CarsConfig = {
         gearSpeedTable: [0, 0.18, 0.35, 0.55, 0.75, 0.90, 1.05],
     },
 
-    // 3. Grip Machine — гриповая машина
+    // 3. Dodge — гриповая машина: отличная поворачиваемость, без дрифта
     gripMachine: {
-        name: 'Grip (Racing)',
+        name: 'Dodge (Grip)',
         color: '#ffcc00',
         roofColor: '#333333',
         maxSpeed: 900,
