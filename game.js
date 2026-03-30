@@ -77,6 +77,12 @@ function changeCar(carType) {
     // Сброс камеры на машину
     camera.x = car.x - (canvas.width / 2) / camera.scale;
     camera.y = car.y - (canvas.height / 2) / camera.scale;
+    
+    // Перезапуск двигателя с новым тембром
+    if (audioInitialized) {
+        Audio.stopEngine();
+        Audio.startEngine(carType);
+    }
 }
 
 // Обработчики клавиатуры
