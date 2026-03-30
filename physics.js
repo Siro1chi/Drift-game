@@ -5,188 +5,163 @@ class CarPhysics {
         // Позиция
         this.x = x;
         this.y = y;
-        
+
         // Скорость (вектор)
         this.velocityX = 0;
         this.velocityY = 0;
-        
+
         // Угол автомобиля (в радианах)
         this.angle = 0;
-        
+
         // Угловая скорость
         this.angularVelocity = 0;
-        
+
         // Параметры автомобиля
-<<<<<<< Updated upstream
-        this.maxSpeed = 8000; // пикселей в секунду
-        this.acceleration = 2100; // Ускорение
-        this.brakeForce = 200;
-        this.friction = 0.96; // Сопротивление качению
-        this.drag = 0.97; // Сопротивление воздуха
-=======
-        this.maxSpeed = 10000; // пикселей в секунду
-        this.acceleration = 1600; // Ускорение
-        this.brakeForce = 100;
-        this.friction = 0.96; // Сопротивление качению
-        this.drag = 0.92; // Сопротивление воздуха
->>>>>>> Stashed changes
-        
+        this.maxSpeed = 800; // макс продольная скорость (px/s)
+        this.acceleration = 900; // сила двигателя (px/s^2) — уменьшено для менее агрессивного разгона
+        this.brakeForce = 3000; // сила торможения (px/s^2)
+        this.reverseSpeed = 200; // макс скорость заднего хода (px/s)
+
+        // Дампинг / сопротивления (коэффициенты в единицах 1/с)
+        this.linearDrag = 1.1; // общее продольное сопротивление (баланс инерции и сопротивления)
+        this.angularDrag = 3.0; // затухание угловой скорости
+        this.driftSpeedLoss = 0.3; // потеря скорости при дрифте (в единицах 1/с)
+
         // Параметры заноса
-        this.grip = 0.35; // Сцепление с дорогой (меньше = легче сорваться)
-        this.slipAngle = 0; // Угол скольжения
-<<<<<<< Updated upstream
-        this.driftFactor = 0.2; // Насколько сильно сносит
-        this.lateralFriction = 1.01; // Боковое трение для инерции в заносе
-=======
-        this.driftFactor = 0.20; // Насколько сильно сносит
-        this.lateralFriction = 0.4; // Боковое трение для инерции в заносе
->>>>>>> Stashed changes
-        
+        this.grip = 4.0; // чем больше — тем лучше сцепление (1..10)
+        this.lateralGrip = 8.0; // боковое трение при нормальном сцеплении
+        this.handbrakeLateralGrip = 1.5; // боковое трение при ручнике (меньше = сильнее скольжение)
+        this.slipAngle = 0; // текущий угол скольжения
+
+        // Управление поворотом
+        this.steerSpeed = 6.0; // чувствительность руля — увеличено, чтобы руль сильнее влиял на поворот
+        this.handbrakeSteerFactor = 1.8; // усиление поворота на ручнике
+        // Физический выворот передних колёс
+        this.frontWheelAngle = 0; // текущий угол передних колёс
+        this.maxWheelAngle = Math.PI / 6; // ~30 градусов
+        this.wheelTurnSpeed = 6.0; // рад/с при малой скорости
+        this.wheelResponseDrop = 0.7; // снижение отзывчивости на высокой скорости (0..1)
+        // Двигаемся в дрифт-положение не только от ручника
+        this.drifting = false;
+        // Минимальная продольная скорость (px/s) для того, чтобы руль влиял на поворот
+        this.minSteerSpeed = 5;
+
         // Размеры автомобиля
         this.width = 50;
         this.height = 25;
-        
+
         // Состояние управления
         this.throttle = 0;
-        this.brake = 0;
         this.steerInput = 0;
         this.handbrake = false;
     }
-    
+
     update(dt, input) {
         // Обработка ввода
-        this.throttle = input.up ? 1 : 0;
-        this.brake = input.down ? 1 : 0;
+        this.throttle = input.up ? 1 : 0; // Газ вперед (W)
         this.steerInput = input.left ? -1 : (input.right ? 1 : 0);
-        this.handbrake = input.handbrake;
-        
-        // Подгазовка (имитация)
-        if (input.up && !input.down) {
-            // Увеличиваем обороты
-        }
-        
-        // Ускорение/торможение
-        const speed = Math.sqrt(this.velocityX ** 2 + this.velocityY ** 2);
-        
+        this.handbrake = input.handbrake; // Только ручник для дрифта
+
+        // Переходим в локальные координаты автомобиля
+        const forward = { x: Math.cos(this.angle), y: Math.sin(this.angle) };
+        const right = { x: -forward.y, y: forward.x };
+
+        // Проекции текущей скорости на локальные оси
+        let forwardVel = this.velocityX * forward.x + this.velocityY * forward.y;
+        let lateralVel = this.velocityX * right.x + this.velocityY * right.y;
+
+        // --- обновление физического угла передних колёс (визуальный/физический выворот)
+        const speedFactorWheel = Math.min(1, Math.abs(forwardVel) / this.maxSpeed);
+        // на малых скоростях выворот сильнее (до x2 при стоянке)
+        const lowSpeedMultiplier = 1 + (1 - speedFactorWheel);
+        const targetWheelAngle = this.steerInput * this.maxWheelAngle * lowSpeedMultiplier;
+        const maxDelta = this.wheelTurnSpeed * (1 - speedFactorWheel * this.wheelResponseDrop) * dt;
+        let wheelDelta = targetWheelAngle - this.frontWheelAngle;
+        if (wheelDelta > maxDelta) wheelDelta = maxDelta;
+        if (wheelDelta < -maxDelta) wheelDelta = -maxDelta;
+        this.frontWheelAngle += wheelDelta;
+
+        // Движение вперед/назад (двигатель)
         if (this.throttle) {
-            const accelX = Math.cos(this.angle) * this.acceleration * dt;
-            const accelY = Math.sin(this.angle) * this.acceleration * dt;
-            this.velocityX += accelX;
-            this.velocityY += accelY;
+            // плавный модификатор ускорения по всему диапазону скоростей (увеличено на 30%)
+            const speedKmh = Math.abs(forwardVel) * 0.36;
+            const maxSpeedKmh = this.maxSpeed * 0.36;
+            const accelMultiplier = (0.25 + 0.75 * Math.min(1, speedKmh / maxSpeedKmh)) * 1.3;
+            forwardVel += this.acceleration * accelMultiplier * dt;
         }
-        
-        if (this.brake) {
-            this.velocityX *= 0.95;
-            this.velocityY *= 0.95;
+
+        // Задний ход - только клавиша S
+        if (input.down) {
+            // Разрешаем задний ход на любых скоростях (даже если машина движется вперед - тормозим)
+            if (forwardVel > 0) {
+                // Если движемся вперед - тормозим
+                forwardVel -= this.brakeForce * 0.5 * dt;
+            } else {
+                // Если остановились или движемся назад - разгоняемся назад
+                forwardVel -= this.acceleration * 0.5 * dt;
+            }
         }
-        
-        // Ограничение максимальной скорости
-        const currentSpeed = Math.sqrt(this.velocityX ** 2 + this.velocityY ** 2);
-        if (currentSpeed > this.maxSpeed) {
-            const ratio = this.maxSpeed / currentSpeed;
-            this.velocityX *= ratio;
-            this.velocityY *= ratio;
+
+        // Ограничение продольной скорости
+        if (forwardVel > this.maxSpeed) forwardVel = this.maxSpeed;
+        if (forwardVel < -this.reverseSpeed) forwardVel = -this.reverseSpeed;
+
+        // Определяем, начинаем ли мы дрифтать "переходом"
+        const slipAngle = Math.atan2(lateralVel, Math.max(1e-4, Math.abs(forwardVel)));
+        const enterDrift = Math.abs(slipAngle) > 0.25 && Math.abs(this.steerInput) > 0.2 && Math.abs(forwardVel) > this.maxSpeed * 0.25;
+        if (this.handbrake || enterDrift) {
+            this.drifting = true;
+        } else if (this.drifting && Math.abs(slipAngle) < 0.12 && !this.handbrake) {
+            this.drifting = false;
         }
-        
-        // Поворот (зависит от скорости) - на 80-100 км/ч базовая скорость, на низких скоростях в 2.5 раза выше
-        const speedKmh = currentSpeed * 0.36; // конвертация в км/ч
-        const maxSpeedRef = 90; // 80-100 км/ч - референсная скорость
-        let steerAuthority;
-        
-        if (speedKmh >= maxSpeedRef) {
-            steerAuthority = 1.0;
-        } else {
-            // На низких скоростях поворот в 2.5 раза сильнее
-            steerAuthority = 1.0 + (1.5 * (1 - speedKmh / maxSpeedRef));
+
+        // Боковое трение (чем меньше значение — тем сильнее скольжение)
+        let lateralGrip = this.drifting ? (this.handbrake ? this.handbrakeLateralGrip : this.lateralGrip * 0.3) : this.lateralGrip;
+        lateralVel *= Math.max(0, 1 - lateralGrip * dt);
+
+        // Продольный дрэг
+        forwardVel *= Math.max(0, 1 - this.linearDrag * dt);
+
+        // При дрифте скорость дополнительно снижается
+        if (this.drifting) {
+            forwardVel *= Math.max(0, 1 - this.driftSpeedLoss * dt);
         }
-        
-<<<<<<< Updated upstream
-        const baseSteerForce = 0.6; // Базовая сила поворота
-=======
-        const baseSteerForce = 0.25; // Базовая сила поворота
->>>>>>> Stashed changes
-        const steerForce = this.steerInput * baseSteerForce * steerAuthority * dt;
-        
-        if (this.handbrake) {
-            // На ручнике поворачиваем резче, но теряем сцепление и ЗАМЕДЛЯЕМСЯ
-<<<<<<< Updated upstream
-            this.angularVelocity += this.steerInput * 0.8 * steerAuthority * dt;
-            this.grip = 0.35;
-            // Ручник тормозит задние колёса - сильное замедление
-            this.velocityX *= 0.97;
-            this.velocityY *= 0.97;
-=======
-            this.angularVelocity += this.steerInput * 0.3 * steerAuthority * dt;
-            this.grip = 0.80    ;
-            // Ручник тормозит задние колёса - сильное замедление
-            this.velocityX *= 0.98;
-            this.velocityY *= 0.98;
->>>>>>> Stashed changes
-        } else {
-            this.angularVelocity += steerForce;
-            this.grip = 0.35;
-        }
-        
-        // Затухание угловой скорости (увеличено для более плавного поворота)
-        this.angularVelocity *= 0.75;
-        
+
+        // Управление поворотом: используем физический угол передних колёс
+        // Управление поворотом теперь зависит от продольной скорости: без скорости — поворот невозможен
+        const speedFactor = Math.min(1, Math.abs(forwardVel) / this.maxSpeed);
+        const wheelRatio = this.frontWheelAngle / this.maxWheelAngle; //
+        const driveInfluence = (Math.abs(forwardVel) > this.minSteerSpeed) ? speedFactor : 0;
+        const steerEffect = wheelRatio * this.steerSpeed * driveInfluence;
+        const steerMultiplier = this.handbrake ? this.handbrakeSteerFactor : 1.0;
+        this.angularVelocity += steerEffect * steerMultiplier * (forwardVel >= 0 ? 1 : -1) * dt;
+
+        // Затухание угловой скорости
+        this.angularVelocity *= Math.max(0, 1 - this.angularDrag * dt);
+
         // Обновляем угол
-        this.angle += this.angularVelocity;
-        
-        // Расчет угла скольжения (разница между направлением движения и углом авто)
-        const moveAngle = Math.atan2(this.velocityY, this.velocityX);
-        let angleDiff = moveAngle - this.angle;
-        
-        // Нормализация угла
-        while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
-        while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
-        
-        this.slipAngle = angleDiff;
-        
-        // Применение сил сцепления/заноса
-        if (Math.abs(this.slipAngle) > 0.15 || this.handbrake) {
-            // Машина в заносе - сохраняем инерцию и боковое скольжение
-            const driftGrip = this.handbrake ? 0.3 : this.grip;
-            
-            // Сохраняем инерцию движения (важно для реалистичного дрифта)
-            this.velocityX *= this.drag;
-            this.velocityY *= this.drag;
-            
-            // Боковое трение (меньше = больше скольжение вбок)
-            const lateralSpeed = -this.velocityX * Math.sin(this.angle) + this.velocityY * Math.cos(this.angle);
-            const forwardSpeed = this.velocityX * Math.cos(this.angle) + this.velocityY * Math.sin(this.angle);
-            
-            // Постепенное уменьшение боковой скорости с сохранением инерции
-            const newLateralSpeed = lateralSpeed * (this.handbrake ? 0.92 : this.lateralFriction);
-            
-            // Пересчитываем вектор скорости
-            this.velocityX = forwardSpeed * Math.cos(this.angle) - newLateralSpeed * Math.sin(this.angle);
-            this.velocityY = forwardSpeed * Math.sin(this.angle) + newLateralSpeed * Math.cos(this.angle);
-        } else {
-            // Нормальное движение с хорошим сцеплением
-            this.velocityX *= this.friction;
-            this.velocityY *= this.friction;
-            
-            // Выравниваем направление движения с углом автомобиля
-            const forwardSpeed = this.velocityX * Math.cos(this.angle) + 
-                                this.velocityY * Math.sin(this.angle);
-            this.velocityX = Math.cos(this.angle) * forwardSpeed;
-            this.velocityY = Math.sin(this.angle) * forwardSpeed;
-        }
-        
+        this.angle += this.angularVelocity * dt;
+
+        // Пересчитываем мировой вектор скорости из локальных компонент
+        this.velocityX = forward.x * forwardVel + right.x * lateralVel;
+        this.velocityY = forward.y * forwardVel + right.y * lateralVel;
+
         // Обновление позиции
         this.x += this.velocityX * dt;
         this.y += this.velocityY * dt;
+
+        // Угол скольжения: отношение боковой и продольной компоненты
+        this.slipAngle = Math.atan2(lateralVel, Math.max(1e-4, Math.abs(forwardVel)));
     }
-    
+
     getSpeed() {
         return Math.sqrt(this.velocityX ** 2 + this.velocityY ** 2);
     }
-    
+
     getDriftAngle() {
         return (this.slipAngle * 180 / Math.PI).toFixed(1);
     }
-    
+
     isDrifting() {
         return Math.abs(this.slipAngle) > 0.2 || this.handbrake;
     }

@@ -8,15 +8,24 @@
 </head>
 <body>
     <div id="ui">
+        <div class="stat">Машина: <span id="car-name">AE86 (Drift)</span></div>
         <div class="stat">Скорость: <span id="speed">0</span> км/ч</div>
         <div class="stat">Угол заноса: <span id="drift-angle">0</span>°</div>
         <div class="controls-hint">
             WASD / Стрелки - Управление<br>
-            Пробел - Ручник
+            Пробел - Ручник<br>
+            1/2/3 - Выбор машины
+        </div>
+        <div class="audio-controls">
+            <button id="audio-toggle" onclick="toggleAudio()">🔇 Вкл. звук</button>
+            <button id="music-toggle" onclick="toggleMusic()">🎵 Вкл. музыку</button>
         </div>
     </div>
     <canvas id="gameCanvas"></canvas>
     <script src="physics.js"></script>
+    <script src="track.js"></script>
+    <script src="cars.js"></script>
+    <script src="audio.js"></script>
     <script src="game.js"></script>
 </body>
 </html>

@@ -6,7 +6,7 @@
 
 body {
     overflow: hidden;
-    background: #1a1a2e;
+    background: #3e8f7d;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
@@ -26,7 +26,7 @@ body {
 
 .stat {
     margin-bottom: 10px;
-    background: rgba(0,0,0,0.3);
+    background: rgba(0, 0, 0, 0.3);
     padding: 8px 15px;
     border-radius: 5px;
     display: inline-block;
@@ -39,4 +39,26 @@ body {
     background: rgba(0,0,0,0.3);
     padding: 10px 15px;
     border-radius: 5px;
+}
+
+.audio-controls {
+    margin-top: 20px;
+    pointer-events: auto;
+}
+
+.audio-controls button {
+    display: block;
+    margin-bottom: 8px;
+    background: rgba(0, 0, 0, 0.5);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    padding: 8px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.2s;
+}
+
+.audio-controls button:hover {
+    background: rgba(0, 0, 0, 0.7);
 }
