@@ -54,6 +54,52 @@ class CarPhysics {
         this.throttle = 0;
         this.steerInput = 0;
         this.handbrake = false;
+
+        // Трансмиссия (значения по умолчанию, переопределяются в applyCarConfig)
+        this.currentGear = 1;
+        this.maxGears = 5;
+        this.gearRatios = [0, 3.5, 2.0, 1.4, 1.0, 0.8];
+        this.finalDrive = 4.0;
+        this.rpm = 1000;
+        this.idleRpm = 800;
+        this.maxRpm = 7500;
+        this.minRpmPower = 2000;
+        this.maxRpmPower = 6500;
+        this.shiftCooldown = 0;
+        this.clutchEngaged = true;
+    }
+
+    // Переключение передач
+    shiftGear(up) {
+        if (this.shiftCooldown > 0) return;
+
+        // up = true -> переключение ВВЕРХ (1->2), up = false -> ВНИЗ (2->1)
+        const newGear = up ? this.currentGear + 1 : this.currentGear - 1;
+
+        if (newGear >= 1 && newGear <= this.maxGears) {
+            this.currentGear = newGear;
+            this.shiftCooldown = 0.25;
+            this.clutchEngaged = false;
+
+            // Звук переключения
+            if (typeof Audio !== 'undefined' && Audio.playShiftSound) {
+                Audio.playShiftSound();
+            }
+
+            // При переключении ВВЕРХ RPM падает, ВНИЗ - растёт
+            if (up) {
+                this.rpm = Math.max(this.idleRpm, this.rpm * 0.55);
+            } else {
+                this.rpm = Math.min(this.maxRpm * 0.85, this.rpm * 1.5);
+            }
+
+            setTimeout(() => {
+                this.clutchEngaged = true;
+            }, 120);
+
+            return true;
+        }
+        return false;
     }
 
     update(dt, input) {
@@ -61,6 +107,14 @@ class CarPhysics {
         this.throttle = input.up ? 1 : 0; // Газ вперед (W)
         this.steerInput = input.left ? -1 : (input.right ? 1 : 0);
         this.handbrake = input.handbrake; // Только ручник для дрифта
+
+        // Переключение передач (E - вверх, Q - вниз)
+        if (input.shiftUp) {
+            this.shiftGear(true);
+        }
+        if (input.shiftDown) {
+            this.shiftGear(false);
+        }
 
         // Переходим в локальные координаты автомобиля
         const forward = { x: Math.cos(this.angle), y: Math.sin(this.angle) };
@@ -70,9 +124,8 @@ class CarPhysics {
         let forwardVel = this.velocityX * forward.x + this.velocityY * forward.y;
         let lateralVel = this.velocityX * right.x + this.velocityY * right.y;
 
-        // --- обновление физического угла передних колёс (визуальный/физический выворот)
+        // --- обновление физического угла передних колёс
         const speedFactorWheel = Math.min(1, Math.abs(forwardVel) / this.maxSpeed);
-        // на малых скоростях выворот сильнее (до x2 при стоянке)
         const lowSpeedMultiplier = 1 + (1 - speedFactorWheel);
         const targetWheelAngle = this.steerInput * this.maxWheelAngle * lowSpeedMultiplier;
         const maxDelta = this.wheelTurnSpeed * (1 - speedFactorWheel * this.wheelResponseDrop) * dt;
@@ -81,13 +134,56 @@ class CarPhysics {
         if (wheelDelta < -maxDelta) wheelDelta = -maxDelta;
         this.frontWheelAngle += wheelDelta;
 
-        // Движение вперед/назад (двигатель)
-        if (this.throttle) {
-            // плавный модификатор ускорения по всему диапазону скоростей (увеличено на 30%)
-            const speedKmh = Math.abs(forwardVel) * 0.36;
-            const maxSpeedKmh = this.maxSpeed * 0.36;
-            const accelMultiplier = (0.25 + 0.75 * Math.min(1, speedKmh / maxSpeedKmh)) * 1.3;
-            forwardVel += this.acceleration * accelMultiplier * dt;
+        // === Расчёт оборотов двигателя ===
+        // В реальности RPM привязаны к скорости через передачу
+        // Используем коэффициент масштабирования для конвертации px/s в "игровые" км/ч
+        const speedScale = 0.05; // Конвертация px/s в условные м/с
+        const wheelRadius = 0.3; // метра
+        const speedMps = Math.abs(forwardVel) * speedScale;
+        const rpmFromSpeed = (speedMps * this.gearRatios[this.currentGear] * this.finalDrive * 60) / (2 * Math.PI * wheelRadius);
+        
+        if (this.throttle && this.clutchEngaged) {
+            // При газе RPM стремятся к рабочим + растут от скорости
+            const targetRpm = Math.max(rpmFromSpeed, this.minRpmPower + (this.maxRpmPower - this.minRpmPower) * 0.7);
+            this.rpm = Math.min(this.maxRpm, this.rpm + (targetRpm - this.rpm) * dt * 4);
+        } else if (this.clutchEngaged) {
+            // Без газа RPM падают к значению от скорости, но не ниже холостых
+            this.rpm = Math.max(this.idleRpm, rpmFromSpeed);
+        } else {
+            // Сцепление выжато - RPM плавно падают
+            this.rpm = Math.max(this.idleRpm, this.rpm - dt * 800);
+        }
+
+        // Автоматическое переключение - только по достижении макс. оборотов
+        if (this.clutchEngaged && this.shiftCooldown <= 0) {
+            if (this.rpm >= this.maxRpm && this.currentGear < this.maxGears) {
+                this.shiftGear(true);
+            } else if (this.rpm <= this.idleRpm + 300 && this.currentGear > 1) {
+                this.shiftGear(false);
+            }
+        }
+
+        // Движение вперед/назад (двигатель) - ускорение зависит от передачи
+        if (this.throttle && this.clutchEngaged) {
+            const gearRatio = this.gearRatios[this.currentGear];
+            // Мощность зависит от RPM
+            const rpmRange = this.maxRpmPower - this.minRpmPower;
+            const rpmPos = (this.rpm - this.minRpmPower) / rpmRange;
+            const rpmFactor = Math.max(0.5, 0.7 + 0.3 * (1 - Math.pow(Math.min(1, rpmPos * 2 - 1), 2)));
+            
+            // Ускорение: на низких передачах больше, на высоких меньше
+            const gearFactor = Math.pow(gearRatio, 0.4);
+            const powerMultiplier = gearFactor * rpmFactor * 0.8;
+            
+            forwardVel += this.acceleration * powerMultiplier * dt;
+        }
+
+        // Ограничение максимальной скорости для текущей передачи
+        // Чем выше передача (меньше gearRatio), тем выше макс. скорость
+        const gearRatio = this.gearRatios[this.currentGear];
+        const maxSpeedForGear = ((this.maxRpm * 2 * Math.PI * wheelRadius) / (gearRatio * this.finalDrive * 60)) / speedScale;
+        if (forwardVel > maxSpeedForGear) {
+            forwardVel = maxSpeedForGear;
         }
 
         // Задний ход - только клавиша S
@@ -150,12 +246,25 @@ class CarPhysics {
         this.x += this.velocityX * dt;
         this.y += this.velocityY * dt;
 
-        // Угол скольжения: отношение боковой и продольной компоненты
+        // Угол скольжения
         this.slipAngle = Math.atan2(lateralVel, Math.max(1e-4, Math.abs(forwardVel)));
+
+        // Обновление cooldown переключения
+        if (this.shiftCooldown > 0) {
+            this.shiftCooldown -= dt;
+        }
     }
 
     getSpeed() {
         return Math.sqrt(this.velocityX ** 2 + this.velocityY ** 2);
+    }
+
+    getRpm() {
+        return this.rpm;
+    }
+
+    getGear() {
+        return this.currentGear;
     }
 
     getDriftAngle() {

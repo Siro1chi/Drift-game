@@ -336,6 +336,27 @@ const Audio = (function() {
         }
     }
 
+    // Звук переключения передач
+    function playShiftSound() {
+        if (!audioContext) return;
+
+        const osc = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(150, audioContext.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(80, audioContext.currentTime + 0.1);
+
+        gain.gain.setValueAtTime(0.3, audioContext.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+
+        osc.connect(gain);
+        gain.connect(masterGain);
+
+        osc.start();
+        osc.stop(audioContext.currentTime + 0.1);
+    }
+
     // Resume audio context (нужно для некоторых браузеров)
     function resume() {
         if (audioContext && audioContext.state === 'suspended') {
@@ -414,6 +435,7 @@ const Audio = (function() {
         startDrift,
         updateDrift,
         stopDrift,
+        playShiftSound,
         resume,
         loadDefaultSounds,
         isInitialized: () => isInitialized,

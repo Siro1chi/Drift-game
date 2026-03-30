@@ -49,7 +49,9 @@ const input = {
     down: false,
     left: false,
     right: false,
-    handbrake: false
+    handbrake: false,
+    shiftUp: false,
+    shiftDown: false
 };
 
 let currentCarType = 'ae86'; // тип текущей машины
@@ -61,6 +63,10 @@ function changeCar(carType) {
     applyCarConfig(car, carType);
     if (carNameElement) carNameElement.textContent = CarsConfig[carType].name;
     console.log(`Выбрана машина: ${CarsConfig[carType].name}`);
+    
+    // Сброс камеры на машину
+    camera.x = car.x - (canvas.width / 2) / camera.scale;
+    camera.y = car.y - (canvas.height / 2) / camera.scale;
 }
 
 // Обработчики клавиатуры
@@ -84,6 +90,14 @@ document.addEventListener('keydown', (e) => {
             break;
         case 'Space':
             input.handbrake = true;
+            break;
+        case 'KeyE':
+        case 'NumpadAdd':
+            input.shiftUp = true;
+            break;
+        case 'KeyQ':
+        case 'NumpadSubtract':
+            input.shiftDown = true;
             break;
         case 'Digit1':
             changeCar('ae86');
@@ -118,6 +132,14 @@ document.addEventListener('keyup', (e) => {
         case 'Space':
             input.handbrake = false;
             break;
+        case 'KeyE':
+        case 'NumpadAdd':
+            input.shiftUp = false;
+            break;
+        case 'KeyQ':
+        case 'NumpadSubtract':
+            input.shiftDown = false;
+            break;
     }
 });
 
@@ -130,16 +152,34 @@ const camera = {
     x: 0,
     y: 0,
     smoothness: 0.1,
-    scale: 1.0  
+    scale: 1.0,
+    velocityOffset: { x: 0, y: 0 } // Смещение от скорости
 };
 
 function updateCamera(dt) {
     // Плавное слежение за автомобилем с учетом масштаба
     const targetX = car.x - (canvas.width / 2) / camera.scale;
     const targetY = car.y - (canvas.height / 2) / camera.scale;
-    
+
     camera.x += (targetX - camera.x) * camera.smoothness;
     camera.y += (targetY - camera.y) * camera.smoothness;
+    
+    // Смещение камеры в противоположную сторону от движения
+    const speed = car.getSpeed();
+    const maxOffset = 150; // Максимальное смещение в пикселях
+    
+    // Направление движения (вектор скорости)
+    const velocityX = car.velocityX;
+    const velocityY = car.velocityY;
+    
+    // Нормализуем и применяем смещение в ПРОТИВОПОЛОЖНУЮ сторону
+    if (speed > 10) {
+        camera.velocityOffset.x = (velocityX / speed) * Math.min(speed * 0.15, maxOffset);
+        camera.velocityOffset.y = (velocityY / speed) * Math.min(speed * 0.15, maxOffset);
+    } else {
+        camera.velocityOffset.x = 0;
+        camera.velocityOffset.y = 0;
+    }
 }
 
 // Отрисовка трассы / декораций вынесена в track.js
@@ -306,10 +346,28 @@ function drawSmokeParticles() {
 
 // Обновление UI
 function updateUI() {
-    const speedKmh = (car.getSpeed() * 0.09).toFixed(0); // Конвертация в км/ч (разделили на 2 от предыдущего значения)
+    const speedKmh = (car.getSpeed() * 0.09).toFixed(0);
     speedElement.textContent = speedKmh;
     driftAngleElement.textContent = car.getDriftAngle();
-    
+
+    // Обновление передачи и RPM
+    const gearElement = document.getElementById('gear');
+    const rpmElement = document.getElementById('rpm');
+    if (gearElement) gearElement.textContent = car.getGear();
+    if (rpmElement) rpmElement.textContent = Math.round(car.getRpm());
+
+    // Цвет RPM - красный если близко к отсечке
+    if (rpmElement) {
+        const rpm = car.getRpm();
+        if (rpm > car.maxRpm * 0.9) {
+            rpmElement.parentElement.style.color = '#ff4444';
+        } else if (rpm > car.maxRpm * 0.75) {
+            rpmElement.parentElement.style.color = '#ffaa00';
+        } else {
+            rpmElement.parentElement.style.color = '#fff';
+        }
+    }
+
     if (car.isDrifting()) {
         driftAngleElement.parentElement.style.color = '#ffcc00';
     } else {
@@ -343,7 +401,7 @@ function gameLoop(timestamp) {
     // Применение камеры
     ctx.save();
     ctx.scale(camera.scale, camera.scale);
-    ctx.translate(-camera.x, -camera.y);
+    ctx.translate(-camera.x - camera.velocityOffset.x, -camera.y - camera.velocityOffset.y);
 
     // Отрисовка
     drawTrack();
@@ -476,4 +534,3 @@ window.playRandomTrack = playRandomTrack;
 // Старт игры
 requestAnimationFrame(gameLoop);
 
-console.log('Дрифт игра запущена! Используйте WASD для управления, Пробел для ручника.');

@@ -15,14 +15,19 @@ const CarsConfig = {
         driftSpeedLoss: 0.35,
         steerSpeed: 7.0,
         handbrakeSteerFactor: 2.0,
-        maxWheelAngle: Math.PI / 5, // ~36 градусов (узкие повороты)
+        maxWheelAngle: Math.PI / 5,
         wheelTurnSpeed: 7.0,
         wheelResponseDrop: 0.6,
         lateralGrip: 6.0,
         handbrakeLateralGrip: 1.2,
+        // 5-ступенчатая КПП (AE86 имеет 5MT) - растянутые передачи
+        gears: 5,
+        gearRatios: [0, 3.8, 2.3, 1.5, 1.0, 0.72], // 1-я тяговая, 5-я скоростная
+        finalDrive: 4.3, // Главная пара для лучшей динамики
+        rpmPowerBand: [2000, 7000],
     },
 
-    // 2. Silvia — трасса-машина: высокая макс скорость, мало теряет в дрифте, широкие углы
+    // 2. Silvia — трасса-машина: высокая макс скорость, мало теряет в дрифте
     silvia: {
         name: 'Silvia (Speed)',
         color: '#e8e8e8',
@@ -36,14 +41,19 @@ const CarsConfig = {
         driftSpeedLoss: 0.25,
         steerSpeed: 6.5,
         handbrakeSteerFactor: 1.5,
-        maxWheelAngle: Math.PI / 6, // ~30 градусов
+        maxWheelAngle: Math.PI / 6,
         wheelTurnSpeed: 5.5,
         wheelResponseDrop: 0.75,
         lateralGrip: 9.0,
         handbrakeLateralGrip: 2.0,
+        // 6-ступенчатая КПП
+        gears: 6,
+        gearRatios: [0, 3.8, 2.5, 1.8, 1.4, 1.1, 0.9],
+        finalDrive: 3.7,
+        rpmPowerBand: [2500, 7500],
     },
 
-    // 3. Grip Machine — гриповая машина: без явного дрифта, отличная поворачиваемость
+    // 3. Grip Machine — гриповая машина
     gripMachine: {
         name: 'Grip (Racing)',
         color: '#ffcc00',
@@ -57,11 +67,16 @@ const CarsConfig = {
         driftSpeedLoss: 0.6,
         steerSpeed: 8.5,
         handbrakeSteerFactor: 1.5,
-        maxWheelAngle: Math.PI / 4.5, // ~40 градусов (отличная поворачиваемость)
+        maxWheelAngle: Math.PI / 4.5,
         wheelTurnSpeed: 7.5,
         wheelResponseDrop: 0.5,
         lateralGrip: 12.0,
         handbrakeLateralGrip: 3.5,
+        // 6-ступенчатая КПП
+        gears: 6,
+        gearRatios: [0, 3.2, 2.2, 1.6, 1.2, 1.0, 0.85],
+        finalDrive: 3.9,
+        rpmPowerBand: [3000, 8000],
     }
 };
 
@@ -79,6 +94,15 @@ function applyCarConfig(car, configType = 'ae86') {
             car[key] = config[key];
         }
     });
+
+    // Применяем параметры КПП
+    if (config.gears) car.maxGears = config.gears;
+    if (config.gearRatios) car.gearRatios = config.gearRatios;
+    if (config.finalDrive) car.finalDrive = config.finalDrive;
+    if (config.rpmPowerBand) {
+        car.minRpmPower = config.rpmPowerBand[0];
+        car.maxRpmPower = config.rpmPowerBand[1];
+    }
 
     car.carType = configType;
     car.carName = config.name;
