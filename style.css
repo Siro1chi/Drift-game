@@ -63,9 +63,11 @@ body {
     background: rgba(0, 0, 0, 0.7);
 }
 
-/* Магнитола */
-.radio {
-    margin-top: 20px;
+/* Магнитола - справа вверху */
+#radio {
+    position: absolute;
+    top: 20px;
+    right: 20px;
     pointer-events: auto;
     background: linear-gradient(145deg, rgba(20, 20, 30, 0.9), rgba(10, 10, 15, 0.95));
     border: 1px solid rgba(100, 150, 255, 0.3);

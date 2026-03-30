@@ -454,6 +454,8 @@ function playRandomTrack() {
 
 function updateTrackName() {
     const trackNameEl = document.getElementById('track-name');
+    if (!trackNameEl) return;
+    
     if (Audio.isInitialized() && Audio.getTrackCount() > 0 && window.trackNames.length > 0) {
         const index = Audio.getCurrentTrackIndex();
         trackNameEl.textContent = window.trackNames[index] || 'Неизвестный трек';

@@ -345,18 +345,19 @@ const Audio = (function() {
 
     // Загрузка звуков по умолчанию (только музыка)
     async function loadDefaultSounds() {
-        // Загрузка музыки из папки audio/music - предпочитаем mp3, иначе ogg
+        // Загрузка всех треков из папки audio/music
         const musicFiles = [
-            'audio/music/Белая Ночь (Eurobeat ) .mp3',
-            'audio/music/Белая Ночь (Eurobeat ) .ogg'
+            'audio/music/Hacking To The Gate.mp3',
+            'audio/music/Holding Out for a Hero _ Eurobeat.mp3',
+            'audio/music/Tokyo Drift - Eurobeat .mp3',
+            'audio/music/Белая Ночь (Eurobeat ) .mp3'
         ];
         
-        const loadedTracks = new Set(); // Для избежания дубликатов
+        const loadedTracks = new Set();
         
         for (const file of musicFiles) {
-            const trackName = file.split('/').pop().replace(/\.(mp3|ogg)$/i, '').trim();
+            const trackName = file.split('/').pop().replace(/\.mp3$/i, '').trim();
             
-            // Пропускаем если трек уже загружен
             if (loadedTracks.has(trackName)) continue;
             
             const buffer = await loadMusic(file);
